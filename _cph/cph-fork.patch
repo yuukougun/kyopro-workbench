@@ -1,5 +1,5 @@
 diff --git a/package.json b/package.json
-index 810ff63..f411617 100644
+index 810ff63..5757ab9 100644
 --- a/package.json
 +++ b/package.json
 @@ -1,6 +1,6 @@
@@ -10,7 +10,18 @@ index 810ff63..f411617 100644
      "description": "Makes judging, compiling, and downloading problems for competitve programming easy. Also supports auto-submit for a few sites.",
      "license": "GPL-3.0-or-later",
      "icon": "icon.png",
-@@ -447,6 +447,32 @@
+@@ -52,6 +52,10 @@
+             {
+                 "command": "cph.compileWithoutRunning",
+                 "title": "%cph.compileWithoutRunning.title%"
++            },
++            {
++                "command": "cph.copyForSubmit",
++                "title": "%cph.copyForSubmit.title%"
+             }
+         ],
+         "menus": {
+@@ -447,6 +451,34 @@
                      "default": false,
                      "description": "%cph.general.showLiveUserCount.description%"
                  },
@@ -26,7 +37,9 @@ index 810ff63..f411617 100644
 +                },
 +                "cph.bundle.includePaths": {
 +                    "type": "array",
-+                    "items": { "type": "string" },
++                    "items": {
++                        "type": "string"
++                    },
 +                    "default": [],
 +                    "markdownDescription": "[fork] 「提出用にコピー」で `#include \"...\"` を探すフォルダ(ソースファイルと同じフォルダは常に探す)。例: `~/atcoder/lib`"
 +                },
@@ -43,6 +56,66 @@ index 810ff63..f411617 100644
                  "cph.general.hideOutputDifference": {
                      "type": "boolean",
                      "default": true,
+diff --git a/package.nls.ja.json b/package.nls.ja.json
+index 7de963d..4be439f 100644
+--- a/package.nls.ja.json
++++ b/package.nls.ja.json
+@@ -95,5 +95,6 @@
+     "cph.submit.notCodeforces": "Codeforces の問題ではありません。",
+     "cph.utils.unsupported": "サポートされていないファイル拡張子です。以下の形式のみ有効です: {0}",
+     "cph.preferences.invalidSaveLocation": "保存場所が無効です。デフォルトに復元します。存在しないパス: {0}",
+-    "cph.processRunSingle.invalidChecker": "カスタム判題スクリプトが '{0}' に見つかりません"
++    "cph.processRunSingle.invalidChecker": "カスタム判題スクリプトが '{0}' に見つかりません",
++    "cph.copyForSubmit.title": "提出用にコピー(ライブラリを展開)"
+ }
+diff --git a/package.nls.json b/package.nls.json
+index 9d8b69c..11d0d85 100644
+--- a/package.nls.json
++++ b/package.nls.json
+@@ -96,5 +96,6 @@
+     "cph.utils.unsupported": "Unsupported file extension. Only these types are valid: {0}",
+     "cph.utils.noActiveEditor": "No active editor found.",
+     "cph.preferences.invalidSaveLocation": "Invalid save location, reverting to default. path not exists: {0}",
+-    "cph.processRunSingle.invalidChecker": "Custom checker script not found at '{0}'"
++    "cph.processRunSingle.invalidChecker": "Custom checker script not found at '{0}'",
++    "cph.copyForSubmit.title": "Copy for Submit (expand libraries)"
+ }
+diff --git a/package.nls.ko.json b/package.nls.ko.json
+index 292c2a2..6a00a04 100644
+--- a/package.nls.ko.json
++++ b/package.nls.ko.json
+@@ -95,5 +95,6 @@
+     "cph.submit.notCodeforces": "Codeforces 문제가 아닙니다.",
+     "cph.utils.unsupported": "지원되지 않는 파일 확장자입니다. 다음 유형만 유효합니다: {0}",
+     "cph.preferences.invalidSaveLocation": "잘못된 저장 위치입니다. 기본값으로 복원합니다. 존재하지 않는 경로: {0}",
+-    "cph.processRunSingle.invalidChecker": "'{0}' 위치에서 커스텀 채점 스크립트를 찾을 수 없습니다"
++    "cph.processRunSingle.invalidChecker": "'{0}' 위치에서 커스텀 채점 스크립트를 찾을 수 없습니다",
++    "cph.copyForSubmit.title": "제출용 복사"
+ }
+diff --git a/package.nls.zh-cn.json b/package.nls.zh-cn.json
+index 717959e..6ec1c0f 100644
+--- a/package.nls.zh-cn.json
++++ b/package.nls.zh-cn.json
+@@ -96,5 +96,6 @@
+     "cph.utils.unsupported": "不支持的文件扩展名。只有以下类型有效：{0}",
+     "cph.utils.noActiveEditor": "未发现活动中的编辑器。",
+     "cph.preferences.invalidSaveLocation": "保存位置无效，正在恢复为默认值。路径不存在：{0}",
+-    "cph.processRunSingle.invalidChecker": "在“{0}”处未找到自定义判题脚本"
++    "cph.processRunSingle.invalidChecker": "在“{0}”处未找到自定义判题脚本",
++    "cph.copyForSubmit.title": "复制以提交"
+ }
+diff --git a/package.nls.zh-tw.json b/package.nls.zh-tw.json
+index fd62aa5..1646792 100644
+--- a/package.nls.zh-tw.json
++++ b/package.nls.zh-tw.json
+@@ -96,5 +96,6 @@
+     "cph.utils.unsupported": "不支援的副檔名。僅支援以下類型：{0}",
+     "cph.utils.noActiveEditor": "找不到作用中的編輯器。",
+     "cph.preferences.invalidSaveLocation": "儲存位置無效，將還原為預設值。路徑不存在：{0}",
+-    "cph.processRunSingle.invalidChecker": "在 '{0}' 找不到自訂評測程式"
++    "cph.processRunSingle.invalidChecker": "在 '{0}' 找不到自訂評測程式",
++    "cph.copyForSubmit.title": "複製以提交"
+ }
 diff --git a/src/bundler.ts b/src/bundler.ts
 new file mode 100644
 index 0000000..4dbc52c
@@ -331,10 +404,10 @@ index 31c13cd..205b5b0 100644
      problem.srcPath = srcPath;
 diff --git a/src/copyBundled.ts b/src/copyBundled.ts
 new file mode 100644
-index 0000000..7d14185
+index 0000000..6f1184c
 --- /dev/null
 +++ b/src/copyBundled.ts
-@@ -0,0 +1,72 @@
+@@ -0,0 +1,82 @@
 +/** [fork] 「提出用にコピー」ボタンの処理 */
 +import * as vscode from 'vscode';
 +import fs from 'fs';
@@ -344,13 +417,23 @@ index 0000000..7d14185
 +
 +const BUNDLE_EXTS = new Set(['.cpp', '.cc', '.cxx', '.hpp', '.h', '.c']);
 +
-+export const copyBundled = async (srcPath: string) => {
-+    // 開いているエディタの内容(未保存の変更を含む)を優先して使う
++/**
++ * @param srcPath コピーするファイル
++ * @param editorText エディタの内容(コマンドから呼ぶとき、未保存の変更を含む)
++ */
++export const copyBundled = async (srcPath: string, editorText?: string) => {
++    // 開いているエディタの内容(未保存の変更を含む)を優先して使う。
++    // textDocuments には Git の差分表示用ドキュメント(git: スキーム。中身は
++    // 最後のコミット時点)も含まれるので、実ファイル(file:)に限定する
 +    const openDoc = vscode.workspace.textDocuments.find(
-+        (d) => path.resolve(d.fileName) === path.resolve(srcPath),
++        (d) =>
++            d.uri.scheme === 'file' &&
++            path.resolve(d.fileName) === path.resolve(srcPath),
 +    );
 +    let text: string;
-+    if (openDoc) {
++    if (editorText !== undefined) {
++        text = editorText;
++    } else if (openDoc) {
 +        text = openDoc.getText();
 +    } else if (fs.existsSync(srcPath)) {
 +        text = fs.readFileSync(srcPath, 'utf8');
@@ -407,6 +490,46 @@ index 0000000..7d14185
 +        vscode.window.showErrorMessage(`展開に失敗しました: ${err.message}`);
 +    }
 +};
+diff --git a/src/extension.ts b/src/extension.ts
+index 26aa912..49b6f2c 100644
+--- a/src/extension.ts
++++ b/src/extension.ts
+@@ -39,6 +39,7 @@ import {
+     getRetainWebviewContextPref,
+     getDefaultOnlineJudge,
+ } from './preferences';
++import { copyBundled } from './copyBundled';
+ import TelemetryReporter from '@vscode/extension-telemetry';
+ import config from './config';
+ import localize from './i18n';
+@@ -97,6 +98,27 @@ const registerCommands = (context: vscode.ExtensionContext) => {
+         },
+     );
+ 
++    // [fork] 提出用にコピー(コマンドパレット・ショートカットから使えるようにする)
++    const disposableCopy = vscode.commands.registerCommand(
++        'cph.copyForSubmit',
++        async () => {
++            const editor = vscode.window.activeTextEditor;
++            // 差分表示(git:)や未保存の新規ファイルでは実ファイルの場所が
++            // 決まらず、ライブラリの相対 include を解決できないので対象外
++            if (editor === undefined || editor.document.uri.scheme !== 'file') {
++                vscode.window.showWarningMessage(
++                    '保存済みのファイルをエディタで開いた状態で実行してください',
++                );
++                return;
++            }
++            await copyBundled(
++                editor.document.fileName,
++                editor.document.getText(),
++            );
++        },
++    );
++    context.subscriptions.push(disposableCopy);
++
+     judgeViewProvider = new JudgeViewProvider(context.extensionUri);
+ 
+     const webviewView = vscode.window.registerWebviewViewProvider(
 diff --git a/src/preferences.ts b/src/preferences.ts
 index 612065f..b27bcd1 100644
 --- a/src/preferences.ts
