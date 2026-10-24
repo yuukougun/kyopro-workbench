@@ -16,3 +16,5 @@ test/
 .DS_Store
 Thumbs.db
 *:Zone.Identifier
+# 自動生成される転送用ヘッダ
+include/
