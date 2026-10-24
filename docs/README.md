@@ -5,7 +5,7 @@
 | ファイル | 内容 |
 | --- | --- |
 | [design.md](design.md) | 全体設計（構成・規約・cph展開との約束・テスト方針）。常に最新を書く |
-| [catalog.md](catalog.md) | 作る機能の一覧と優先度・状態 |
+| [catalog.md](catalog.md) | 欲しい機能のメモと一覧（思いついたら「メモ」に箇条書き） |
 | [backlog.md](backlog.md) | 未決事項・アイデア・将来の改善 |
 | [discussions/](discussions/) | 話し合いの記録（`YYYY-MM-DD_題名.md`） |
 | [decisions/](decisions/) | 決定事項と理由（`NNNN-題名.md`） |

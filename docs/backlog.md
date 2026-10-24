@@ -22,7 +22,7 @@
 - [ ] 回答用テンプレート（型エイリアス、マクロ、入出力、`#ifdef LOCAL` のデバッグ出力）
 
 ### 中身
-- [ ] 機能カタログ（何を作るか・優先度）→ catalog.md
+- [ ] 機能カタログ（何を作るか・優先度）→ catalog.md に随時書き足す
 
 ### 検証・運用
 - [ ] テスト方法（Library Checker / AOJ、online-judge-verify-helper、CI）
