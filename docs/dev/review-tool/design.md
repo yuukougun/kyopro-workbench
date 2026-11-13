@@ -1,7 +1,7 @@
 # AtCoder精進支援 設計書
 
-作成日：2026-11-13（第9版）　状態：設計段階（未実装）
-実装するリポジトリ：atcoder-library
+作成日：2026-11-13（第10版）　状態：設計段階（未実装）
+実装するリポジトリ：atcoder-library（名前を変える予定。13章）
 連携できるリポジトリ（任意）：kyopro-atlas（教材・記録）
 
 各版の変更点と理由は `docs/discussions/2026-11-13_review-tool.md` にある。
@@ -57,7 +57,9 @@ VSCode拡張の一般的な規則に従う（名前は小文字とハイフン�
 
 atcoder.jpにはAIの利用を断る指定（noai）がある。kyopro-atlasでも「AIで開かない」と決めている。これに合わせ、**Claudeは自分からはページを開かない**ことを既定にする。問題文はスクリーンショットか要約で受け取り、サンプルは `.prob` から読む。
 
-利用者が明示した時だけ開こうとする。「明示」は、「ページを開いて」「問題文を読んで」のように、開くことや読むことを言葉で頼んだ時を指す。「ABC123を今やってるから確認して」のように問題を伝えただけの時は開かず、スクリーンショットか要約を頼むか、開いてよいかを聞き返す（この範囲は未決。13章）。
+利用者が明示した時だけ開こうとする。テンプレートの既定では、「明示」は「ページを開いて」「問題文を読んで」のように、開くことや読むことを言葉で頼んだ時を指す。「ABC123を今やってるから確認して」のように問題を伝えただけの時は開かず、スクリーンショットか要約を頼むか、開いてよいかを聞き返す。
+
+この範囲を広げたい人（問題を伝えて確認を頼めば開いてよい、など）は、作業フォルダの `CLAUDE.local.md`（各自のファイル。install.sh は触れない）にそう書く。テンプレートの `CLAUDE.md` を書き換えないのは、install.sh で置き直した時に消えないようにするため。
 
 開く時の動きは、権限設定で3通りに切り替えられる。
 
@@ -108,8 +110,8 @@ Claude Codeのセッションは、作業フォルダで起動したもの1つ�
 ```
 atcoder-library/
 ├── _extensions/
-│   ├── cph-fork/                 # 旧 _cph。パッチとビルド手順
-│   └── atcoder-review/           # 新規：レビュー拡張のソース
+│   ├── cph-fork/                 # 旧 _cph。パッチ、vsix、ビルド手順
+│   └── atcoder-review/           # 新規：レビュー拡張のソースと vsix
 ├── _claude/
 │   ├── CLAUDE.md                 # テンプレート
 │   ├── settings.json             # テンプレート
@@ -126,22 +128,22 @@ atcoder-library/
 
 先頭の `_` は、ライブラリ本体のフォルダと区別するため。
 
-vsix（ビルド済みの拡張を1つにまとめたファイル）の配り方は未決（13章）。案は、リポジトリに入れずGitHub Releasesで配布し、リポジトリにはソース（cph forkはパッチ）とビルド手順を置く形。
+vsix（ビルド済みの拡張を1つにまとめたファイル）は、リポジトリに入れて配る。拡張を直したら、ビルドし直した vsix も一緒にコミットする。ソース（cph forkはパッチ）とビルド手順も置く。
 
 テンプレートには、絶対パスや個人のフォルダ名を書かない。ライブラリやkyopro-atlasの場所など、環境で変わる情報は、レビュー拡張が `context.json` に書き出し、Claudeはそこから読む（4.5）。
 
 ### 4.2 install.sh
 
 ```
-_claude/install.sh [--link] [--force] <作業フォルダ>
+_claude/install.sh [--force] <作業フォルダ>
 ```
 
 作業フォルダに、`CLAUDE.md`、`.claude/settings.json`、`.claude/skills/coach-*` を置く。
 
 - 引数の作業フォルダは必須。省略した時は使い方を表示して終わり、どこにも書き込まない。
-- 既定はコピー。`--link` を付けると、リポジトリ内のファイルへのシンボリックリンクを置く。テンプレートを自分で直しながら使う人向けで、直した内容がすぐ反映される。
+- ファイルはコピーで置く。テンプレートを直した時は、リポジトリ側で直してコミットしてから置き直す。
 - 置き先にすでに中身の違うファイルがある時は、差分を表示してそのファイルを飛ばす。`--force` を付けた時だけ上書きする。
-- `settings.local.json` には触れない。
+- `settings.local.json` と `CLAUDE.local.md` には触れない。
 
 ### 4.3 作業フォルダの例
 
@@ -150,6 +152,7 @@ _claude/install.sh [--link] [--force] <作業フォルダ>
 ```
 作業フォルダ/
 ├── CLAUDE.md                     # install.sh で置く
+├── CLAUDE.local.md               # 各自が書く（任意。2.1の範囲を広げる時など）
 ├── .claude/
 │   ├── settings.json             # install.sh で置く
 │   ├── settings.local.json       # 各自が書く（任意）
@@ -168,7 +171,7 @@ _claude/install.sh [--link] [--force] <作業フォルダ>
         └── last_test.json
 ```
 
-作業フォルダをGitで管理する場合、`.atcoder-review/` と、install.sh で置いたファイルは管理対象から外すことをREADMEで勧める。
+作業フォルダをGitで管理する場合、`.atcoder-review/`、install.sh で置いたファイル、`CLAUDE.local.md` は管理対象から外すことをREADMEで勧める。
 
 ### 4.4 レビュー拡張の設定
 
@@ -335,7 +338,7 @@ cph forkは、テストの実行が終わったら、その結果をイベント
 
 レビュー拡張は、cph forkが入っていればそのイベントを購読し、結果を `last_test.json` に書き出す。cph forkが入っていなければ、この機能は無効になる。
 
-cph forkの拡張IDは、本家と同じ `DivyanshuAgrawal.competitive-programming-helper`（版を `2077.0.0` にして本家の更新で上書きされないようにしている）なので、レビュー拡張はこのIDで探す。
+cph forkの拡張IDは、フォークの一般的なやり方に従って自分のもの（`yuukougun.cph-fork`）にし、レビュー拡張はこのIDで探す。設定とコマンドの名前（`cph.*`）は本家のままにして、本家と入れ替えて使う（本家は無効にするかアンインストールする）。
 
 こうすると、cph forkだけを使う人の環境に余計なファイルができず、forkへのパッチも小さく済む。イベントで渡す内容（ソースファイルのパス、コンパイル結果、各ケースの判定・時間・入出力）の細部は実装時に決める。
 
@@ -349,7 +352,7 @@ cph forkの拡張IDは、本家と同じ `DivyanshuAgrawal.competitive-programmi
 
 **役割と基本姿勢**：精進のコーチであること。ソースコードとライブラリは編集しないこと。書き込んでよいのは `context.json` が示す `.atcoder-review/` 配下だけであること。例外として、利用者が `/record-problem` を実行した時だけ、そのスキルの手順に従ってkyopro-atlasの `notes/` に書き込んでよい。
 
-**他のCLAUDE.mdとの関係**：Claude Codeは、作業フォルダの下のフォルダにあるファイルを読んだ時に、そのフォルダの `CLAUDE.md` も読み込む（kyopro-atlasの教材制作用の `CLAUDE.md` など）。精進のセッションでは、それらの指示には従わず、このファイルの方針を優先する。
+**他のCLAUDE.mdとの関係**：Claude Codeは、作業フォルダの下のフォルダにあるファイルを読んだ時に、そのフォルダの `CLAUDE.md` も読み込む（kyopro-atlasの教材制作用の `CLAUDE.md` など）。精進のセッションでは、それらの指示には従わず、このファイルの方針を優先する。ただし、作業フォルダの `CLAUDE.local.md`（利用者の個人設定）は、このファイルより優先する。
 
 **状態と環境の参照**：「ここ」「今の」と言われたら `context.json` を読む。`dirty` が `true` なら保存を促す。テスト結果について聞かれたら `last_test.json` を読む。
 
@@ -475,7 +478,6 @@ kyopro-atlasの規則に従い、形を変える時は版を上げ、関係す�
 
 - `/record-problem` は `disable-model-invocation: true` のままにし、会話の途中でClaudeが勝手に記録しないこと。
 - kyopro-atlasのファイルを読んで、その `CLAUDE.md`（教材制作用）が読み込まれても、作業フォルダの `CLAUDE.md` の方針が優先されること。
-- install.sh の `--link` で置いた `CLAUDE.md` と `settings.json` のシンボリックリンクを、Claude Codeが正しく読むこと（スキルのフォルダのリンクは公式に対応している）。
 
 ---
 
@@ -493,23 +495,25 @@ ACしたら `/coach-review` で添削と別解を受ける。解けずに諦め�
 
 ## 10. README.md（今回新規に作る）
 
+日本語で書く。
+
 | 節 | 内容 |
 |---|---|
 | 概要 | このリポジトリの中身（ライブラリ、cph fork、レビュー拡張、Claude用テンプレート） |
 | ライブラリ | 使い方の概要と、`docs/` への案内 |
-| cph fork | 本家（https://github.com/agrawal-d/competitive-programming-helper 、GPL-3.0-or-later、パッチの元にした版）の明示、追加した機能、インストール方法、ビルド手順 |
+| cph fork | 本家（https://github.com/agrawal-d/competitive-programming-helper 、GPL-3.0-or-later、パッチの元にした版）の明示、追加した機能、インストール方法（本家を無効にしてから入れる）、ビルド手順 |
 | レビュー拡張とClaude連携 | 仕組みの概要、セットアップの手順（下記）、各設定の説明、kyopro-atlasとの連携方法 |
-| atcoder.jpの扱い | 2.1の内容。noai指定があること、既定では開かないこと、開くかどうかは各自の判断 |
+| atcoder.jpの扱い | 2.1の内容。noai指定があること、既定では開かないこと、開くかどうかは各自の判断、`CLAUDE.local.md` で範囲を変える方法 |
 | 生成AIルール | 開催中のコンテストでは使わないこと。コンテスト用のVSCodeプロファイルを勧める |
 | 対応環境 | WSL 2前提。Windowsネイティブは対象外 |
 | ライセンス | CC0-1.0。ただし `_extensions/cph-fork/` は本家に従い GPL-3.0-or-later（フォルダ内にも LICENSE を置く） |
 
 **セットアップの手順**
 
-1. cph fork とレビュー拡張の vsix をインストールする（配り方は13章で決める）。
+1. リポジトリにある cph fork とレビュー拡張の vsix をインストールする。本家の cph は無効にしておく。
 2. `_claude/install.sh <作業フォルダ>` で、テンプレートを作業フォルダに置く。
 3. cph fork の `cph.bundle.includePaths` などを、自分の環境に合わせて設定する。
-4. 必要なら、`.claude/settings.local.json` で atcoder.jp の取得の承認を省くか、禁止する。このファイルを手で作った場合は、各自で .gitignore に加える（Claude Code が自動で git の管理から外すのは、Claude Code 自身がこのファイルを作った時だけ）。
+4. 必要なら、`.claude/settings.local.json` で atcoder.jp の取得の承認を省くか、禁止する。開いてよい場面を広げたい時は、`CLAUDE.local.md` に書く。このファイルを手で作った場合は、各自で .gitignore に加える（Claude Code が自動で git の管理から外すのは、Claude Code 自身がこのファイルを作った時だけ）。
 5. kyopro-atlas と連携する場合だけ、`atcoderReview.atlasPath` を設定し、`/record-problem` へのシンボリックリンクを作業フォルダの `.claude/skills/` に置く（8.2）。
 6. Claude Codeで作業フォルダを開く（デスクトップアプリならWSLセッションで）。
 
@@ -542,10 +546,7 @@ AI補完系の拡張を入れていない、コンテスト用のVSCodeプロフ
 
 | 項目 | 内容 |
 |---|---|
-| 「明示」の範囲 | 2.1。問題を伝えただけで開いてよいか |
-| vsixの配り方 | 4.1。GitHub Releasesか、リポジトリに入れるか |
-| READMEの言語 | 10章。日本語・英語・両方 |
-| cph forkの拡張ID | 5.3。本家と同じIDのまま公開してよいか |
+| リポジトリの名前 | atcoder-library から変える。候補から選ぶ |
 | cph forkのイベントの形 | 5.3で渡す内容の細部。実装時に決める |
 
 ---
@@ -554,7 +555,7 @@ AI補完系の拡張を入れていない、コンテスト用のVSCodeプロフ
 
 | フェーズ | 内容 | 得られるもの |
 |---|---|---|
-| 0 | リポジトリの整理（`_cph/` を `_extensions/cph-fork/` に移す、vsixの扱い、`_claude/` と install.sh を作る）、README.md と LICENSE の作成 | 実装の置き場所が決まる |
+| 0 | リポジトリの名前の変更、整理（`_cph/` を `_extensions/cph-fork/` に移す、cph forkの拡張IDを変える、`_claude/` と install.sh を作る）、README.md と LICENSE の作成 | 実装の置き場所が決まる |
 | 1 | CLAUDE.md、skills、権限設定、レビュー拡張の context.json 書き出し | 「ここ見て」で会話できる |
 | 2 | 指摘と進み具合の表示、対処済みチェック、行のずれの検知 | 行ごとの指摘が見える |
 | 3 | cph forkのイベント公開と、レビュー拡張の last_test.json 書き出し | テスト結果込みで相談できる |
