@@ -1,0 +1,79 @@
+{
+    "name": "atcoder-review",
+    "displayName": "AtCoder Review",
+    "description": "AtCoder の精進用。Claude Code が書いた指摘をエディタに表示し、今の状態とテスト結果を Claude に渡す",
+    "version": "0.1.0",
+    "publisher": "yuukougun",
+    "license": "CC0-1.0",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/yuukougun/kyopro-workbench"
+    },
+    "engines": {
+        "vscode": "^1.85.0"
+    },
+    "categories": [
+        "Other"
+    ],
+    "activationEvents": [
+        "onStartupFinished"
+    ],
+    "main": "./out/src/extension.js",
+    "contributes": {
+        "configuration": {
+            "title": "AtCoder Review",
+            "properties": {
+                "atcoderReview.root": {
+                    "type": "string",
+                    "default": "${workspaceFolder}/.atcoder-review",
+                    "markdownDescription": "`context.json` を置くフォルダ。使える変数: `${workspaceFolder}`、`~`"
+                },
+                "atcoderReview.problemDirectory": {
+                    "type": "string",
+                    "default": "${root}/${contest}/${index}",
+                    "markdownDescription": "問題ごとのファイル（`review.json` など）を置くフォルダ。使える変数: `${workspaceFolder}` `${root}` `${contest}` `${task}` `${index}`"
+                },
+                "atcoderReview.atlasPath": {
+                    "type": "string",
+                    "default": "",
+                    "markdownDescription": "kyopro-atlas の場所。設定した時だけ、Claude が教材との連携を使う。空なら無効"
+                }
+            }
+        },
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "atcoderReview",
+                    "title": "AtCoder Review",
+                    "icon": "media/icon.svg"
+                }
+            ]
+        },
+        "views": {
+            "atcoderReview": [
+                {
+                    "type": "webview",
+                    "id": "atcoderReview.panel",
+                    "name": "指摘"
+                }
+            ]
+        },
+        "commands": [
+            {
+                "command": "atcoderReview.refresh",
+                "title": "AtCoder Review: 再読み込み"
+            }
+        ]
+    },
+    "scripts": {
+        "compile": "tsc -p .",
+        "test": "tsc -p . && node --test out/tests/*.test.js",
+        "package": "npm test && vsce package --no-dependencies -o atcoder-review.vsix"
+    },
+    "devDependencies": {
+        "@types/node": "^20.19.0",
+        "@types/vscode": "~1.85.0",
+        "@vscode/vsce": "~3.2.2",
+        "typescript": "~5.6.3"
+    }
+}

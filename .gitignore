@@ -18,3 +18,7 @@ Thumbs.db
 *:Zone.Identifier
 # 自動生成される転送用ヘッダ
 include/
+
+# レビュー拡張のビルドで生成されるもの
+node_modules/
+_extensions/atcoder-review/out/
