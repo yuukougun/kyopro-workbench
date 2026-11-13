@@ -1,6 +1,6 @@
 # docs
 
-ライブラリ着手前の話し合い・決定事項・設計をまとめる場所。
+ライブラリ着手前の話し合い・決定事項・設計をまとめる場所。開発する道具の設計書は `dev/` に置く。
 
 | ファイル | 内容 |
 | --- | --- |
@@ -9,6 +9,7 @@
 | [backlog.md](backlog.md) | 未決事項・アイデア・将来の改善 |
 | [discussions/](discussions/) | 話し合いの記録（`YYYY-MM-DD_題名.md`） |
 | [decisions/](decisions/) | 決定事項と理由（`NNNN-題名.md`） |
+| [dev/](dev/) | 開発する道具の設計書（[review-tool/design.md](dev/review-tool/design.md): 精進支援のレビュー拡張と Claude 連携） |
 
 ## 運用ルール
 - 話し合い → `discussions/` に記録 → 決まったら `decisions/` に残し、`design.md` / `catalog.md` に反映する。
