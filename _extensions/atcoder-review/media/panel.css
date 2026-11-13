@@ -171,6 +171,27 @@ li.item.resolved .md {
     color: var(--vscode-editorWarning-foreground);
 }
 
+/* 関連ページ（見出しを閉じていても見える） */
+.item-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin: 3px 0 0 calc(1em + 22px);
+}
+
+.item-links a.link {
+    font-size: 0.85em;
+    color: var(--vscode-textLink-foreground);
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 10px;
+    padding: 0 7px;
+    text-decoration: none;
+}
+
+.item-links a.link:hover {
+    text-decoration: underline;
+}
+
 /* ---- 本文（Markdown） */
 
 .md {

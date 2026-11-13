@@ -108,28 +108,28 @@ test('truncate: 長い入出力は先頭だけ', () => {
     assert.match(t, /全 100 行/);
 });
 
-test('buildLastTest: AC 以外だけ入出力を書く', () => {
+test('buildLastTest: 入出力は最初の2件の不正解だけ、標準エラーは書かない', () => {
     const r = buildLastTest(
         {
             srcPath: '/w/abc400/c.cpp',
             url: 'https://atcoder.jp/contests/abc400/tasks/abc400_c',
             compile: { ok: true },
-            cases: [tc({ id: 1 }), tc({ id: 2, pass: false, stdout: '3\n', stderr: 'warn' })],
+            cases: [
+                tc({ id: 1 }),
+                tc({ id: 2, pass: false, stdout: '3\n', stderr: 'debug' }),
+                tc({ id: 3, pass: false, timeOut: true }),
+                tc({ id: 4, pass: false }),
+            ],
         },
         '/w',
         new Date(),
     );
     assert.equal(r.file, 'abc400/c.cpp');
     assert.deepEqual(r.cases[0], { id: 1, verdict: 'AC', timeMs: 10 });
-    assert.deepEqual(r.cases[1], {
-        id: 2,
-        verdict: 'WA',
-        timeMs: 10,
-        input: '1\n',
-        expected: '2\n',
-        actual: '3\n',
-        stderr: 'warn',
-    });
+    assert.deepEqual(r.cases[1], { id: 2, verdict: 'WA', timeMs: 10, input: '1\n', expected: '2\n', actual: '3\n' });
+    assert.equal(r.cases[2].verdict, 'TLE');
+    assert.ok('input' in r.cases[2]);
+    assert.deepEqual(r.cases[3], { id: 4, verdict: 'WA', timeMs: 10 });
 });
 
 test('parseReview: 正しい形', () => {
@@ -140,7 +140,7 @@ test('parseReview: 正しい形', () => {
             nextId: 4,
             items: [
                 { id: 'r1', line: 3, endLine: 5, anchor: 'x', kind: 'bug', hintLevel: 1, title: 't1' },
-                { id: 'r2', line: 7, kind: 'library', title: 't2' },
+                { id: 'r2', line: 7, kind: 'library', title: 't2', links: [{ title: '二分探索', url: 'https://example.com/a/' }] },
                 { id: 'r3', line: null, kind: 'alt', title: '行に結び付かない' },
             ],
         }),
@@ -156,6 +156,8 @@ test('parseReview: 正しい形', () => {
             ['r3', null, null, 'alt'],
         ],
     );
+    assert.deepEqual(r.value.items[1].links, [{ title: '二分探索', url: 'https://example.com/a/' }]);
+    assert.deepEqual(r.value.items[0].links, []);
     assert.deepEqual(r.value.warnings, []);
 });
 
@@ -172,14 +174,16 @@ test('parseReview: 壊れた JSON と、形の違う項目', () => {
                 { id: 'r4', line: 2, kind: 'bug' },
                 { id: 'r5', line: 2, kind: 'severe', title: 'ok' },
                 { id: 'r5', line: 3, kind: 'bug', title: 'dup' },
+                { id: 'r6', kind: 'hint', title: 'l', links: [{ title: 'x', url: 'javascript:alert(1)' }, { title: 'ok', url: 'https://e.com/' }] },
             ],
         }),
     );
     assert.ok(r.ok);
     if (!r.ok) return;
     assert.equal(r.value.progress.maxHint, 3);
-    assert.deepEqual(r.value.items.map((i) => [i.id, i.kind]), [['r5', 'hint']]);
-    assert.equal(r.value.warnings.length, 6);
+    assert.deepEqual(r.value.items.map((i) => [i.id, i.kind]), [['r5', 'hint'], ['r6', 'hint']]);
+    assert.deepEqual(r.value.items[1].links, [{ title: 'ok', url: 'https://e.com/' }]);
+    assert.equal(r.value.warnings.length, 7);
 });
 
 const lines = (text: string) => {

@@ -2,7 +2,7 @@
     "name": "atcoder-review",
     "displayName": "AtCoder Review",
     "description": "AtCoder の精進用。Claude Code が書いた指摘をパネルに表示し、今の状態とテスト結果を Claude に渡す",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "publisher": "yuukougun",
     "license": "CC0-1.0",
     "repository": {

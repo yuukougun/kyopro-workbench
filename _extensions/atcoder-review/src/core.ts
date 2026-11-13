@@ -122,8 +122,10 @@ export const verdictOf = (c: CphTestCase): Verdict => {
     return c.pass === false ? 'WA' : 'UNKNOWN';
 };
 
-export const MAX_LINES = 30;
-export const MAX_CHARS = 2000;
+export const MAX_LINES = 20;
+export const MAX_CHARS = 1000;
+/** 入出力を書く不正解のケースの数（残りは判定だけ） */
+export const MAX_DETAILED_CASES = 2;
 
 /** 長い入出力は先頭だけにする */
 export const truncate = (text: string): string => {
@@ -138,29 +140,33 @@ export const truncate = (text: string): string => {
     return out;
 };
 
-export const buildLastTest = (
-    ev: CphTestEvent,
-    workspace: string,
-    now: Date,
-) => ({
-    at: localIso(now),
-    file: toWorkspacePath(workspace, ev.srcPath),
-    compile: { ok: ev.compile.ok },
-    cases: ev.cases.map((c) => {
-        const verdict = verdictOf(c);
-        const base = { id: c.id, verdict, timeMs: c.timeMs };
-        if (verdict === 'AC') {
-            return base;
-        }
-        return {
-            ...base,
-            input: truncate(c.input),
-            expected: truncate(c.expected),
-            actual: truncate(c.stdout),
-            ...(c.stderr !== '' ? { stderr: truncate(c.stderr) } : {}),
-        };
-    }),
-});
+/**
+ * last_test.json の中身。Claude が読むので、文脈を圧迫しないよう小さく保つ。
+ * - 入出力は、最初の MAX_DETAILED_CASES 件の不正解のケースだけに書く
+ * - 標準エラー（デバッグ出力など）は書かない
+ */
+export const buildLastTest = (ev: CphTestEvent, workspace: string, now: Date) => {
+    let detailed = 0;
+    return {
+        at: localIso(now),
+        file: toWorkspacePath(workspace, ev.srcPath),
+        compile: { ok: ev.compile.ok },
+        cases: ev.cases.map((c) => {
+            const verdict = verdictOf(c);
+            const base = { id: c.id, verdict, timeMs: c.timeMs };
+            if (verdict === 'AC' || detailed >= MAX_DETAILED_CASES) {
+                return base;
+            }
+            detailed++;
+            return {
+                ...base,
+                input: truncate(c.input),
+                expected: truncate(c.expected),
+                actual: truncate(c.stdout),
+            };
+        }),
+    };
+};
 
 // ---------------------------------------------------------------- 指摘
 
@@ -186,7 +192,11 @@ export type ReviewItem = {
     kind: Kind;
     hintLevel?: number;
     title: string;
+    /** 関連ページ（kyopro-atlas など）。見出しの下に並べる */
+    links: Link[];
 };
+
+export type Link = { title: string; url: string };
 
 export type Progress = { maxHint: number; accepted: boolean; gaveUp: boolean };
 
@@ -269,6 +279,18 @@ export const parseReview = (text: string): ParseResult<Review> => {
         } else {
             warnings.push(`${it.id}: kind が ${KINDS.join('・')} のどれでもないので、hint として表示しています`);
         }
+        const links: Link[] = [];
+        if (Array.isArray(it.links)) {
+            for (const l of it.links) {
+                if (isObject(l) && typeof l.title === 'string' && typeof l.url === 'string' && /^https?:\/\//.test(l.url)) {
+                    links.push({ title: l.title, url: l.url });
+                } else {
+                    warnings.push(`${it.id}: links に、title と http(s) の url を持たないものがあります`);
+                }
+            }
+        } else if (it.links !== undefined) {
+            warnings.push(`${it.id}: links が配列ではありません`);
+        }
         seen.add(it.id);
         items.push({
             id: it.id,
@@ -278,6 +300,7 @@ export const parseReview = (text: string): ParseResult<Review> => {
             kind,
             hintLevel: typeof it.hintLevel === 'number' ? it.hintLevel : undefined,
             title: it.title,
+            links,
         });
     });
     return {

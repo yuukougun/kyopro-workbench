@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Edit(/.atcoder-review/**)"
+      "Edit(/.atcoder-review/**)",
+      "Bash(python3 .claude/skills/record-problem/record_tool.py pages *)",
+      "Bash(python3 .claude/skills/record-problem/record_tool.py url *)"
     ],
     "deny": [
       "Edit(//**/*.cpp)",

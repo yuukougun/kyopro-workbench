@@ -56,6 +56,7 @@ AtCoder の過去問精進を、Claude Code との会話で支援する仕組み
 3. WA の原因が分からない時は `/coach-check`（問題文と実装の食い違いを探す）。
 4. 指摘はパネルに種類ごとに出て、該当行のガターに印が付きます。見出しをクリックすると本文が開きます。直したらパネルで「対処済み」にチェックする。
 5. AC したら `/coach-review` で添削と別解。諦める時は `/coach-giveup`。
+6. 次の問題に移る前に `/clear` で会話を区切る（記録するなら先に `/record-problem`）。進み具合や指摘はファイルに残るので失われず、使用量を抑えられます。
 
 ### atcoder.jp の扱い
 
@@ -67,7 +68,7 @@ AtCoder の ABC・ARC・AGC の開催中は、生成 AI の利用が制限され
 
 ### kyopro-atlas との連携（任意）
 
-教材サイト [kyopro-atlas](https://github.com/yuukougun/kyopro-atlas) と連携すると、Claude が教材のページを根拠として示し、同じセッションから `/record-problem` で精進の記録を残せます。
+教材サイト [kyopro-atlas](https://github.com/yuukougun/kyopro-atlas) と連携すると、Lv2 以上のヒントや添削に、手法に合う教材のページのリンクが付きます（Lv1 では答えを明かさないよう付けません）。同じセッションから `/record-problem` で精進の記録も残せます。
 
 1. レビュー拡張の設定 `atcoderReview.atlasPath` に、kyopro-atlas の場所を設定する。
 2. kyopro-atlas の記録スキルへのシンボリックリンクを、作業フォルダに置く。

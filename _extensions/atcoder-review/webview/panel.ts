@@ -22,6 +22,7 @@ type PanelItem = {
     kind: Kind;
     hintLevel?: number;
     title: string;
+    links: { title: string; url: string }[];
     line: number | null;
     endLine: number | null;
     origLine: number | null;
@@ -159,6 +160,16 @@ const renderItem = (it: PanelItem) => {
     }
 
     li.append(head, meta);
+    if (it.links.length > 0) {
+        const links = el('div', 'item-links');
+        for (const l of it.links) {
+            const a = el('a', 'link', l.title);
+            a.setAttribute('href', l.url);
+            a.title = l.url;
+            links.append(a);
+        }
+        li.append(links);
+    }
     if (it.open && it.body !== null) {
         const body = el('div', 'md');
         body.innerHTML = renderMarkdown(it.body);

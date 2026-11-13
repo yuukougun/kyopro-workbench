@@ -30,6 +30,7 @@ export type PanelItem = {
     kind: Kind;
     hintLevel?: number;
     title: string;
+    links: { title: string; url: string }[];
     /** 今表示している行（追従後）。行に結び付かない・見失った時は null */
     line: number | null;
     endLine: number | null;
@@ -333,6 +334,7 @@ export class ReviewController implements vscode.Disposable {
                 kind: it.kind,
                 hintLevel: it.hintLevel,
                 title: it.title,
+                links: it.links,
                 line: loc.state === 'found' ? loc.line : null,
                 endLine: loc.state === 'found' ? loc.endLine : null,
                 origLine: it.line,
