@@ -1,10 +1,12 @@
 # AtCoder精進支援 設計書
 
-作成日：2026-11-13（第8版）　状態：設計段階（未実装）
+作成日：2026-11-13（第9版）　状態：設計段階（未実装）
 実装するリポジトリ：atcoder-library
 連携できるリポジトリ（任意）：kyopro-atlas（教材・記録）
 
-第7版からの変更点と理由は `docs/discussions/2026-11-13_review-tool.md` にある。
+各版の変更点と理由は `docs/discussions/2026-11-13_review-tool.md` にある。
+
+実装への着手（kyopro-atlas側の変更を含む）は、利用者の指示があってから行う。
 
 ---
 
@@ -22,6 +24,7 @@ Claudeは自動では動かず、自分が話しかけた時だけ答える。�
 - 既定の設定は、リポジトリ内か、利用者がVSCodeで開いたワークスペース内で完結させる。それより外にアクセスする機能は、利用者が明示的に設定するか、その都度承認した時だけ動くようにする。
 - `CLAUDE.md` や `.claude/` をどこに置くかは、各自が決める。リポジトリはテンプレートと設置用のスクリプトを用意するだけにする。
 - kyopro-atlasとの連携は任意の機能にし、設定しなければ無効にする。
+- ライセンスは CC0-1.0。cph fork だけは本家に従い GPL-3.0-or-later（decisions/0006）。
 
 **対応環境**
 
@@ -29,7 +32,14 @@ WSL 2（Linux）を前提にする。Linux・macOSでも動く想定だが、Win
 
 **名前**
 
-拡張のID、設定の接頭辞（本書では仮に `kyoproReview`）、スキルの接頭辞（仮に `kp-`）は、実装の時に決める。本書の名前はすべて仮称。
+| 対象 | 名前 |
+|---|---|
+| レビュー拡張 | ID `yuukougun.atcoder-review`（表示名 AtCoder Review）、ソースは `_extensions/atcoder-review/` |
+| 設定の接頭辞 | `atcoderReview` |
+| 連絡用のフォルダ | `.atcoder-review/` |
+| スキルの接頭辞 | `coach-` |
+
+VSCode拡張の一般的な規則に従う（名前は小文字とハイフン、IDは `発行者.名前`、設定の接頭辞は名前のキャメルケース）。発行者はGitHubのユーザー名にする。連絡用のフォルダは、他の道具と重ならないよう拡張の名前を付ける。スキルの接頭辞は、Claudeの役割（コーチ）から取る。ライブラリの名前空間とは揃えない。
 
 ---
 
@@ -47,7 +57,9 @@ WSL 2（Linux）を前提にする。Linux・macOSでも動く想定だが、Win
 
 atcoder.jpにはAIの利用を断る指定（noai）がある。kyopro-atlasでも「AIで開かない」と決めている。これに合わせ、**Claudeは自分からはページを開かない**ことを既定にする。問題文はスクリーンショットか要約で受け取り、サンプルは `.prob` から読む。
 
-利用者が「ページを開いて」と明示した時だけ開こうとする。その時の動きは、権限設定で3通りに切り替えられる。
+利用者が明示した時だけ開こうとする。「明示」は、「ページを開いて」「問題文を読んで」のように、開くことや読むことを言葉で頼んだ時を指す。「ABC123を今やってるから確認して」のように問題を伝えただけの時は開かず、スクリーンショットか要約を頼むか、開いてよいかを聞き返す（この範囲は未決。13章）。
+
+開く時の動きは、権限設定で3通りに切り替えられる。
 
 | 設定 | 明示した時の動き | 設定する場所 |
 |---|---|---|
@@ -60,7 +72,7 @@ atcoder.jpにはAIの利用を断る指定（noai）がある。kyopro-atlasで�
 開く場合も、Claudeに守らせることは同じ（CLAUDE.mdに書く）。
 
 - 一度に開くのは、利用者が指定したその1問の問題ページだけ。リンクをたどって他のページを開かない。
-- 解説ページは、AC後か `/kp-giveup` の後に、利用者が明示した時だけ開く。
+- 解説ページは、AC後か `/coach-giveup` の後に、利用者が明示した時だけ開く。
 - 取得した問題文や解説は、ファイルに保存しない。`review.json` にも問題文を引用しない。
 - 拡張機能がページを先回りして取得することはしない。
 
@@ -73,7 +85,7 @@ READMEには、noai指定があること、既定では開かないこと、開�
 | 構成要素 | リポジトリ内の場所 | 役割 | Claudeを呼ぶか |
 |---|---|---|---|
 | cph fork（既存） | `_extensions/cph-fork/` | 問題の取り込み、問題ファイル作成、サンプルテスト、提出用バンドル、テスト結果の通知（5.3） | 呼ばない |
-| レビュー拡張（新規） | `_extensions/kyopro-review/` | 状態とテスト結果の書き出し、指摘と進み具合の表示、対処済みの管理 | 呼ばない |
+| レビュー拡張（新規） | `_extensions/atcoder-review/` | 状態とテスト結果の書き出し、指摘と進み具合の表示、対処済みの管理 | 呼ばない |
 | Claude用テンプレート | `_claude/` | CLAUDE.md、settings.json、skills。各自が作業フォルダに置く | — |
 | Claude Codeのセッション | 各自の作業フォルダ | ヒント、照合、添削、質問への回答、（任意）kyopro-atlasへの記録 | 本体 |
 
@@ -97,12 +109,12 @@ Claude Codeのセッションは、作業フォルダで起動したもの1つ�
 atcoder-library/
 ├── _extensions/
 │   ├── cph-fork/                 # 旧 _cph。パッチとビルド手順
-│   └── kyopro-review/            # 新規：レビュー拡張のソース
+│   └── atcoder-review/           # 新規：レビュー拡張のソース
 ├── _claude/
 │   ├── CLAUDE.md                 # テンプレート
 │   ├── settings.json             # テンプレート
 │   ├── skills/
-│   │   └── kp-*/SKILL.md
+│   │   └── coach-*/SKILL.md
 │   └── install.sh                # 設置用スクリプト
 ├── docs/
 │   └── dev/review-tool/design.md # 本書
@@ -114,7 +126,7 @@ atcoder-library/
 
 先頭の `_` は、ライブラリ本体のフォルダと区別するため。
 
-vsix（ビルド済みの拡張）はリポジトリに入れず、GitHub Releasesで配布する。リポジトリにはソース（cph forkはパッチ）とビルド手順を置く。
+vsix（ビルド済みの拡張を1つにまとめたファイル）の配り方は未決（13章）。案は、リポジトリに入れずGitHub Releasesで配布し、リポジトリにはソース（cph forkはパッチ）とビルド手順を置く形。
 
 テンプレートには、絶対パスや個人のフォルダ名を書かない。ライブラリやkyopro-atlasの場所など、環境で変わる情報は、レビュー拡張が `context.json` に書き出し、Claudeはそこから読む（4.5）。
 
@@ -124,7 +136,7 @@ vsix（ビルド済みの拡張）はリポジトリに入れず、GitHub Releas
 _claude/install.sh [--link] [--force] <作業フォルダ>
 ```
 
-作業フォルダに、`CLAUDE.md`、`.claude/settings.json`、`.claude/skills/kp-*` を置く。
+作業フォルダに、`CLAUDE.md`、`.claude/settings.json`、`.claude/skills/coach-*` を置く。
 
 - 引数の作業フォルダは必須。省略した時は使い方を表示して終わり、どこにも書き込まない。
 - 既定はコピー。`--link` を付けると、リポジトリ内のファイルへのシンボリックリンクを置く。テンプレートを自分で直しながら使う人向けで、直した内容がすぐ反映される。
@@ -142,13 +154,13 @@ _claude/install.sh [--link] [--force] <作業フォルダ>
 │   ├── settings.json             # install.sh で置く
 │   ├── settings.local.json       # 各自が書く（任意）
 │   └── skills/
-│       ├── kp-*/                 # install.sh で置く
+│       ├── coach-*/              # install.sh で置く
 │       └── record-problem        # kyopro-atlas へのシンボリックリンク（連携時のみ・各自）
 ├── abc400/
 │   ├── c.cpp                     # cph が作る問題ファイル
 │   └── .cph/                     # cph のテストケース（.prob）
 ├── lib/                          # このリポジトリ（cph.bundle.includePaths は lib/include）
-└── .review/                      # レビュー拡張と Claude の連絡用
+└── .atcoder-review/              # レビュー拡張と Claude の連絡用
     ├── context.json
     └── abc400/c/
         ├── review.json
@@ -156,15 +168,15 @@ _claude/install.sh [--link] [--force] <作業フォルダ>
         └── last_test.json
 ```
 
-作業フォルダをGitで管理する場合、`.review/` と、install.sh で置いたファイルは管理対象から外すことをREADMEで勧める。
+作業フォルダをGitで管理する場合、`.atcoder-review/` と、install.sh で置いたファイルは管理対象から外すことをREADMEで勧める。
 
 ### 4.4 レビュー拡張の設定
 
 | 設定 | 既定値 | 内容 |
 |---|---|---|
-| `kyoproReview.root` | `${workspaceFolder}/.review` | context.json の置き場所 |
-| `kyoproReview.problemDirectory` | `${root}/${contest}/${index}` | 問題ごとのファイルの置き場所 |
-| `kyoproReview.atlasPath` | （空＝無効） | kyopro-atlas の場所。設定した時だけ、記録の連携を有効にする |
+| `atcoderReview.root` | `${workspaceFolder}/.atcoder-review` | context.json の置き場所 |
+| `atcoderReview.problemDirectory` | `${root}/${contest}/${index}` | 問題ごとのファイルの置き場所 |
+| `atcoderReview.atlasPath` | （空＝無効） | kyopro-atlas の場所。設定した時だけ、記録の連携を有効にする |
 
 既定値は、開いているワークスペースの中で完結する。
 
@@ -186,7 +198,7 @@ _claude/install.sh [--link] [--force] <作業フォルダ>
     "url": "https://atcoder.jp/contests/abc400/tasks/abc400_c",
     "probFile": "abc400/.cph/.c.cpp_xxxx.prob"
   },
-  "problemDir": ".review/abc400/c",
+  "problemDir": ".atcoder-review/abc400/c",
   "file": "abc400/c.cpp",
   "dirty": false,
   "cursor": { "line": 23 },
@@ -202,7 +214,7 @@ _claude/install.sh [--link] [--force] <作業フォルダ>
 
 `problem` の情報は、開いているファイルに対応する `.prob` から取る。`.prob` の場所は、cphの保存先の設定（`cph.general.saveLocation`）によって変わるので、cph自身と同じ方法で探す。`.prob` が見つからないファイル（ライブラリの編集中など）では、`problem` と `problemDir` を `null` にする。
 
-`env.includePaths` は、cph forkの `cph.bundle.includePaths` を展開したもの。`env.atlasPath` は `kyoproReview.atlasPath` を展開したもので、`null` ならkyopro-atlas連携を使わない。
+`env.includePaths` は、cph forkの `cph.bundle.includePaths` を展開したもの。`env.atlasPath` は `atcoderReview.atlasPath` を展開したもので、`null` ならkyopro-atlas連携を使わない。
 
 `dirty` は未保存の変更があるかどうか。Claudeはディスク上のファイルを読むので、`true` の時は保存を促させる。
 
@@ -267,8 +279,8 @@ _claude/install.sh [--link] [--force] <作業フォルダ>
 | 項目 | 意味 |
 |---|---|
 | `maxHint` | 出したヒントの最高段階（0〜3。0は使っていない） |
-| `accepted` | 利用者がACしたと伝えた時（`/kp-review` の実行を含む）に `true` |
-| `gaveUp` | `/kp-giveup` の実行で `true` |
+| `accepted` | 利用者がACしたと伝えた時（`/coach-review` の実行を含む）に `true` |
+| `gaveUp` | `/coach-giveup` の実行で `true` |
 
 解答の段階（6.1）に進んでよいのは、`accepted` か `gaveUp` が `true` の時だけ。`review.json` がない問題は、何も使っていないとみなす。
 
@@ -323,6 +335,8 @@ cph forkは、テストの実行が終わったら、その結果をイベント
 
 レビュー拡張は、cph forkが入っていればそのイベントを購読し、結果を `last_test.json` に書き出す。cph forkが入っていなければ、この機能は無効になる。
 
+cph forkの拡張IDは、本家と同じ `DivyanshuAgrawal.competitive-programming-helper`（版を `2077.0.0` にして本家の更新で上書きされないようにしている）なので、レビュー拡張はこのIDで探す。
+
 こうすると、cph forkだけを使う人の環境に余計なファイルができず、forkへのパッチも小さく済む。イベントで渡す内容（ソースファイルのパス、コンパイル結果、各ケースの判定・時間・入出力）の細部は実装時に決める。
 
 ---
@@ -333,7 +347,7 @@ cph forkは、テストの実行が終わったら、その結果をイベント
 
 テンプレートには、特定の環境のパスを書かない。
 
-**役割と基本姿勢**：精進のコーチであること。ソースコードとライブラリは編集しないこと。書き込んでよいのは `context.json` が示す `.review/` 配下だけであること。例外として、利用者が `/record-problem` を実行した時だけ、そのスキルの手順に従ってkyopro-atlasの `notes/` に書き込んでよい。
+**役割と基本姿勢**：精進のコーチであること。ソースコードとライブラリは編集しないこと。書き込んでよいのは `context.json` が示す `.atcoder-review/` 配下だけであること。例外として、利用者が `/record-problem` を実行した時だけ、そのスキルの手順に従ってkyopro-atlasの `notes/` に書き込んでよい。
 
 **他のCLAUDE.mdとの関係**：Claude Codeは、作業フォルダの下のフォルダにあるファイルを読んだ時に、そのフォルダの `CLAUDE.md` も読み込む（kyopro-atlasの教材制作用の `CLAUDE.md` など）。精進のセッションでは、それらの指示には従わず、このファイルの方針を優先する。
 
@@ -356,7 +370,7 @@ cph forkは、テストの実行が終わったら、その結果をイベント
 | Lv3 | 方針、正しさ、計算量、実装の要点 |
 | 解答 | 完全な解答コード。`progress.accepted` か `progress.gaveUp` が `true` の時のみ |
 
-段階を指定されなかったら、これまでの最高段階（`progress.maxHint`、初回はLv1）のまま別の気づきを出し、自分から上の段階には進まない。ヒントを出したら `progress.maxHint` を更新する。利用者がACしたと伝えたら `progress.accepted` を `true` にする。Lv1とLv2はkyopro-atlasの「ヒントだけ」、Lv3は「解説まで」に対応する。
+段階を指定されなかったら、これまでの最高段階（`progress.maxHint`、初回はLv1）から始める。利用者が「分からない」と言った、前のヒントの点がまだ直っていないなど、その段階では進めない様子なら、Claudeの判断で1段ずつ上げてよい。上げる時は「Lv2に上げる」のように一言添え、2段以上を一度に上げない。Claudeの判断で上げられるのはLv3までで、解答には進まない。ヒントを出したら `progress.maxHint` を更新する。利用者がACしたと伝えたら `progress.accepted` を `true` にする。Lv1とLv2はkyopro-atlasの「ヒントだけ」、Lv3は「解説まで」に対応する。
 
 **原因の一言**：ヒントや解説を使った時、または解けなかった時は、最後に原因を4つ（知識不足／気づけなかった／実装ミス／時間不足）から1つ選んで添える。ヒントの段階では、原因も手がかりになるので、解けた後に添える。自力でACした時は添えない。分類はkyopro-atlasと同じ。
 
@@ -364,16 +378,16 @@ cph forkは、テストの実行が終わったら、その結果をイベント
 
 ### 6.2 skills
 
-名前に共通の接頭辞を付ける（仮に `kp-`）。入力欄で `/kp` と打つだけで、自分のスキルだけに絞り込めるようにするため。
+名前に共通の接頭辞 `coach-` を付ける。入力欄で `/coach` と打つだけで、このスキルだけに絞り込めるようにするため。
 
 | コマンド | 内容 | Claudeが自分で使えるか |
 |---|---|---|
-| /kp-hint [段階] | 指定段階のヒントを出す。指摘があれば review.json を更新する | 使える |
-| /kp-check | 問題文と実装を照らし合わせ、制約の範囲、型、境界、出力形式、計算量の食い違いをピンポイントで指摘する | 使える |
-| /kp-review | ACの申告を兼ねる。添削と別解を出し、review.json を更新する | 使えない |
-| /kp-giveup | ギブアップを宣言する。解答の段階に進めるようにする | 使えない |
+| /coach-hint [段階] | 指定段階のヒントを出す。段階を省くと、今の段階からClaudeが判断する（6.1）。指摘があれば review.json を更新する | 使える |
+| /coach-check | 問題文と実装を照らし合わせ、制約の範囲、型、境界、出力形式、計算量の食い違いをピンポイントで指摘する | 使える |
+| /coach-review | ACの申告を兼ねる。添削と別解を出し、review.json を更新する | 使えない |
+| /coach-giveup | ギブアップを宣言する。解答の段階に進めるようにする | 使えない |
 
-`/kp-review` と `/kp-giveup` には `disable-model-invocation: true` を付け、利用者が打った時だけ動くようにする。Claudeが自分の判断で解答の段階に進まないようにするため。
+`/coach-review` と `/coach-giveup` には `disable-model-invocation: true` を付け、利用者が打った時だけ動くようにする。Claudeが自分の判断で解答の段階に進まないようにするため。
 
 記録には、kyopro-atlasの `/record-problem` をそのまま使う（8章）。記録用のスキルをこのリポジトリでは作らない。
 
@@ -383,7 +397,7 @@ cph forkは、テストの実行が終わったら、その結果をイベント
 
 既定の権限の動き（ファイルの編集やシェルコマンドの前に確認が出る）を前提に、次のように設定する。
 
-- `.review/` 配下への書き込みは、確認なしで許可する。
+- `.atcoder-review/` 配下への書き込みは、確認なしで許可する。
 - ソースファイルとヘッダ（`*.cpp`、`*.hpp`、`*.h` など）の編集と新規作成は禁止する。この禁止は、`Edit` と `Write` のほか、Claude Codeが認識するシェルのファイル操作（`sed`、`tee`、リダイレクトなど）にも効く。
 - シェルコマンドは広く許可しない。PythonやNodeのスクリプトの中でファイルを開いて書き換える操作は、上の禁止では防げないため。毎回確認が出る状態にしておく。OSのレベルで確実に防ぎたい人は、Claude Codeのサンドボックスを使う。
 - kyopro-atlasの `notes/` への書き込みは、テンプレートでは何も書かない（書き込むたびに確認が出る）。確認を省きたい人は、各自の `settings.local.json` で許可する。
@@ -471,9 +485,9 @@ Competitive Companionで問題を取り込むと、cph forkが問題ファイル
 
 VSCodeでコードを書き、cphでサンプルを確認する。テスト結果は自動で `last_test.json` に残る。
 
-詰まったら、該当箇所を選択したまま保存し、Claude Codeで「ここ見て」や `/kp-hint 1` と話しかける。問題文はスクリーンショットか要約で渡す。WAの原因が分からない時は `/kp-check` を使う。指摘はエディタ上と右パネルに表示され、直したら対処済みにチェックする。
+詰まったら、該当箇所を選択したまま保存し、Claude Codeで「ここ見て」や `/coach-hint 1` と話しかける。問題文はスクリーンショットか要約で渡す。WAの原因が分からない時は `/coach-check` を使う。指摘はエディタ上と右パネルに表示され、直したら対処済みにチェックする。
 
-ACしたら `/kp-review` で添削と別解を受ける。解けずに諦める時は `/kp-giveup` で解答を見る。kyopro-atlasと連携している場合は、記録を残したい問題で、そのまま同じセッションで `/record-problem abc400_c` を実行する。Claudeが会話と進み具合から記録の案を出すので、確かめて記録する。
+ACしたら `/coach-review` で添削と別解を受ける。解けずに諦める時は `/coach-giveup` で解答を見る。kyopro-atlasと連携している場合は、記録を残したい問題で、そのまま同じセッションで `/record-problem abc400_c` を実行する。Claudeが会話と進み具合から記録の案を出すので、確かめて記録する。
 
 ---
 
@@ -483,20 +497,20 @@ ACしたら `/kp-review` で添削と別解を受ける。解けずに諦める�
 |---|---|
 | 概要 | このリポジトリの中身（ライブラリ、cph fork、レビュー拡張、Claude用テンプレート） |
 | ライブラリ | 使い方の概要と、`docs/` への案内 |
-| cph fork | 本家（リポジトリ、ライセンス、パッチの元にした版）の明示、追加した機能、インストール方法（Releasesのvsix）、ビルド手順 |
+| cph fork | 本家（https://github.com/agrawal-d/competitive-programming-helper 、GPL-3.0-or-later、パッチの元にした版）の明示、追加した機能、インストール方法、ビルド手順 |
 | レビュー拡張とClaude連携 | 仕組みの概要、セットアップの手順（下記）、各設定の説明、kyopro-atlasとの連携方法 |
 | atcoder.jpの扱い | 2.1の内容。noai指定があること、既定では開かないこと、開くかどうかは各自の判断 |
 | 生成AIルール | 開催中のコンテストでは使わないこと。コンテスト用のVSCodeプロファイルを勧める |
 | 対応環境 | WSL 2前提。Windowsネイティブは対象外 |
-| ライセンス | フォルダごとに明記する。cph forkはGPL-3.0（本家に従う）。それ以外は作業時に決める |
+| ライセンス | CC0-1.0。ただし `_extensions/cph-fork/` は本家に従い GPL-3.0-or-later（フォルダ内にも LICENSE を置く） |
 
 **セットアップの手順**
 
-1. Releasesから cph fork とレビュー拡張の vsix を取ってインストールする。
+1. cph fork とレビュー拡張の vsix をインストールする（配り方は13章で決める）。
 2. `_claude/install.sh <作業フォルダ>` で、テンプレートを作業フォルダに置く。
 3. cph fork の `cph.bundle.includePaths` などを、自分の環境に合わせて設定する。
 4. 必要なら、`.claude/settings.local.json` で atcoder.jp の取得の承認を省くか、禁止する。このファイルを手で作った場合は、各自で .gitignore に加える（Claude Code が自動で git の管理から外すのは、Claude Code 自身がこのファイルを作った時だけ）。
-5. kyopro-atlas と連携する場合だけ、`kyoproReview.atlasPath` を設定し、`/record-problem` へのシンボリックリンクを作業フォルダの `.claude/skills/` に置く（8.2）。
+5. kyopro-atlas と連携する場合だけ、`atcoderReview.atlasPath` を設定し、`/record-problem` へのシンボリックリンクを作業フォルダの `.claude/skills/` に置く（8.2）。
 6. Claude Codeで作業フォルダを開く（デスクトップアプリならWSLセッションで）。
 
 ---
@@ -509,14 +523,18 @@ AI補完系の拡張を入れていない、コンテスト用のVSCodeプロフ
 
 ---
 
-## 12. 作らないもの・後回しにするもの
+## 12. 最初の実装に入れないもの
 
 | 機能 | 扱い | 理由 |
 |---|---|---|
-| スキル一覧のパネル | 作らない | `/kp` と打てば一覧と説明が出る |
-| メモタブ（後で聞きたい質問、`/kp-ask`） | 後回し | チャットで聞けば足りる可能性がある。使ってみて必要なら作る |
-| 過去の記録の表示（kyopro-atlas連携時） | 後回し | 記録は `/record-problem` で読める。必要になったら作る |
-| コンテストモード | 後回し | 安全策の本体はClaude Codeを閉じることとVSCodeプロファイルで、拡張側の切り替えの効果は小さい |
+最初の実装には入れない。利用者が最初の実装の使い勝手を確かめてから、必要なものを追加する。
+
+| 機能 | 入れなかった理由 |
+|---|---|
+| スキル一覧のパネル | `/coach` と打てば一覧と説明が出る |
+| メモタブ（後で聞きたい質問、`/coach-ask`） | チャットで聞けば足りる可能性がある |
+| 過去の記録の表示（kyopro-atlas連携時） | 記録は `/record-problem` で読める |
+| コンテストモード | 安全策の本体はClaude Codeを閉じることとVSCodeプロファイルで、拡張側の切り替えの効果は小さい |
 
 ---
 
@@ -524,8 +542,10 @@ AI補完系の拡張を入れていない、コンテスト用のVSCodeプロフ
 
 | 項目 | 内容 |
 |---|---|
-| ライセンス | ライブラリ、レビュー拡張、テンプレートのライセンス。作業時に決める |
-| 名前 | 拡張のID、設定とスキルの接頭辞。実装時に決める |
+| 「明示」の範囲 | 2.1。問題を伝えただけで開いてよいか |
+| vsixの配り方 | 4.1。GitHub Releasesか、リポジトリに入れるか |
+| READMEの言語 | 10章。日本語・英語・両方 |
+| cph forkの拡張ID | 5.3。本家と同じIDのまま公開してよいか |
 | cph forkのイベントの形 | 5.3で渡す内容の細部。実装時に決める |
 
 ---
@@ -534,8 +554,10 @@ AI補完系の拡張を入れていない、コンテスト用のVSCodeプロフ
 
 | フェーズ | 内容 | 得られるもの |
 |---|---|---|
-| 0 | リポジトリの整理（`_cph/` を `_extensions/cph-fork/` に移し vsix を Releases へ、`_claude/` と install.sh を作る）、README.md の作成 | 実装の置き場所が決まる |
+| 0 | リポジトリの整理（`_cph/` を `_extensions/cph-fork/` に移す、vsixの扱い、`_claude/` と install.sh を作る）、README.md と LICENSE の作成 | 実装の置き場所が決まる |
 | 1 | CLAUDE.md、skills、権限設定、レビュー拡張の context.json 書き出し | 「ここ見て」で会話できる |
 | 2 | 指摘と進み具合の表示、対処済みチェック、行のずれの検知 | 行ごとの指摘が見える |
 | 3 | cph forkのイベント公開と、レビュー拡張の last_test.json 書き出し | テスト結果込みで相談できる |
 | 4 | kyopro-atlas連携（kyopro-atlas側の `/record-problem` の変更、スキルの登録手順） | 同じセッションでの記録 |
+
+どのフェーズも、利用者の指示があってから着手する。
