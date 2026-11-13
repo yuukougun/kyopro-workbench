@@ -1,5 +1,5 @@
 diff --git a/package.json b/package.json
-index 810ff63..2aa97b4 100644
+index 810ff63..6eff2d1 100644
 --- a/package.json
 +++ b/package.json
 @@ -1,11 +1,11 @@
@@ -14,7 +14,7 @@ index 810ff63..2aa97b4 100644
 -    "publisher": "DivyanshuAgrawal",
 -    "version": "2077.0.0",
 +    "publisher": "yuukougun",
-+    "version": "1.0.0",
++    "version": "1.1.0",
      "engines": {
          "vscode": "^1.52.0"
      },
@@ -418,6 +418,32 @@ index 31c13cd..205b5b0 100644
  
      // Add fields absent in competitive companion.
      problem.srcPath = srcPath;
+diff --git a/src/compiler.ts b/src/compiler.ts
+index 4b94594..07bc8fd 100644
+--- a/src/compiler.ts
++++ b/src/compiler.ts
+@@ -390,6 +390,10 @@ export const compileFile = async (srcPath: string): Promise<boolean> => {
+             getJudgeViewProvider().extensionToJudgeViewMessage({
+                 command: 'compiling-stop',
+             });
++            getJudgeViewProvider().extensionToJudgeViewMessage({
++                command: 'compile-error',
++                output: err.message,
++            });
+             getJudgeViewProvider().extensionToJudgeViewMessage({
+                 command: 'not-running',
+             });
+@@ -410,6 +414,10 @@ export const compileFile = async (srcPath: string): Promise<boolean> => {
+                 getJudgeViewProvider().extensionToJudgeViewMessage({
+                     command: 'compiling-stop',
+                 });
++                getJudgeViewProvider().extensionToJudgeViewMessage({
++                    command: 'compile-error',
++                    output: error,
++                });
+                 getJudgeViewProvider().extensionToJudgeViewMessage({
+                     command: 'not-running',
+                 });
 diff --git a/src/copyBundled.ts b/src/copyBundled.ts
 new file mode 100644
 index 0000000..6f1184c
@@ -1072,7 +1098,7 @@ index 0000000..10bfa1e
 +    });
 +});
 diff --git a/src/types.ts b/src/types.ts
-index e6e87a0..7c151cc 100644
+index e6e87a0..fb5b64e 100644
 --- a/src/types.ts
 +++ b/src/types.ts
 @@ -61,7 +61,12 @@ export type prefSection =
@@ -1089,7 +1115,7 @@ index e6e87a0..7c151cc 100644
  
  export type Language = {
      name: LangNames;
-@@ -223,7 +228,13 @@ export type OpenFile = {
+@@ -223,7 +228,20 @@ export type OpenFile = {
      path: string;
  };
  
@@ -1098,13 +1124,41 @@ index e6e87a0..7c151cc 100644
 +    command: 'copy-bundled';
 +} & WebviewMessageCommon;
 +
++// [fork] 判定パネルのコンパイルエラーの文をコピーする
++export type CopyText = {
++    command: 'copy-text';
++    text: string;
++};
++
  export type WebviewToVSEvent =
 +    | CopyBundled
++    | CopyText
      | RunAllCommand
      | GetInitialProblem
      | CreateLocalProblem
+@@ -268,6 +286,12 @@ export type CompilingStopCommand = {
+     command: 'compiling-stop';
+ };
+ 
++// [fork] コンパイルエラーの文を判定パネルに表示する
++export type CompileErrorCommand = {
++    command: 'compile-error';
++    output: string;
++};
++
+ export type RunAllInWebViewCommand = {
+     command: 'run-all';
+ };
+@@ -313,6 +337,7 @@ export type VSToWebViewMessage =
+     | RunAllInWebViewCommand
+     | CompilingStartCommand
+     | CompilingStopCommand
++    | CompileErrorCommand
+     | WaitingForSubmitCommand
+     | SubmitFinishedCommand
+     | NotRunningCommand
 diff --git a/src/webview/JudgeView.ts b/src/webview/JudgeView.ts
-index f146318..86226ad 100644
+index f146318..e9a1b0d 100644
 --- a/src/webview/JudgeView.ts
 +++ b/src/webview/JudgeView.ts
 @@ -21,10 +21,12 @@ import {
@@ -1120,7 +1174,7 @@ index f146318..86226ad 100644
  
  class JudgeViewProvider implements vscode.WebviewViewProvider {
      public static readonly viewType = 'cph.judgeView';
-@@ -54,6 +56,11 @@ class JudgeViewProvider implements vscode.WebviewViewProvider {
+@@ -54,6 +56,21 @@ class JudgeViewProvider implements vscode.WebviewViewProvider {
              async (message: WebviewToVSEvent) => {
                  globalThis.logger.log('Got from webview', message);
                  switch (message.command) {
@@ -1129,10 +1183,20 @@ index f146318..86226ad 100644
 +                        break;
 +                    }
 +
++                    // [fork] コンパイルエラーの文をコピーする
++                    case 'copy-text': {
++                        await vscode.env.clipboard.writeText(message.text);
++                        vscode.window.setStatusBarMessage(
++                            'コンパイルエラーをコピーしました',
++                            3000,
++                        );
++                        break;
++                    }
++
                      case 'run-single-and-save': {
                          const problem = message.problem;
                          const id = message.id;
-@@ -176,7 +183,7 @@ class JudgeViewProvider implements vscode.WebviewViewProvider {
+@@ -176,7 +193,7 @@ class JudgeViewProvider implements vscode.WebviewViewProvider {
                      case 'open-settings': {
                          vscode.commands.executeCommand(
                              'workbench.action.openSettings',
@@ -1141,7 +1205,7 @@ index f146318..86226ad 100644
                          );
                          break;
                      }
-@@ -360,6 +367,7 @@ class JudgeViewProvider implements vscode.WebviewViewProvider {
+@@ -360,6 +377,7 @@ class JudgeViewProvider implements vscode.WebviewViewProvider {
              generatedJsonUri: generatedJsonUri.toString(),
              remoteServerAddress,
              showLiveUserCount,
@@ -1150,7 +1214,7 @@ index f146318..86226ad 100644
              translations: translation,
              pythonCommand,
 diff --git a/src/webview/frontend/App.tsx b/src/webview/frontend/App.tsx
-index 77dcac5..8b1cde3 100644
+index 77dcac5..44e3d92 100644
 --- a/src/webview/frontend/App.tsx
 +++ b/src/webview/frontend/App.tsx
 @@ -45,6 +45,8 @@ interface CustomWindow extends Window {
@@ -1162,7 +1226,29 @@ index 77dcac5..8b1cde3 100644
      console: Console;
      translations: Record<string, string>;
      pythonCommand: string;
-@@ -434,6 +436,14 @@ function Judge(props: {
+@@ -122,6 +124,9 @@ function Judge(props: {
+     const [forceRunning, setForceRunning] = useState<number | false>(false);
+     const [forceChecking, setForceChecking] = useState<number | false>(false);
+     const [compiling, setCompiling] = useState<boolean>(false);
++    // [fork] コンパイルエラーの文。開閉できる欄に表示する
++    const [compileError, setCompileError] = useState<string | null>(null);
++    const [compileErrorOpen, setCompileErrorOpen] = useState<boolean>(false);
+     const [notification, setNotification] = useState<string | null>(null);
+     const [waitingForSubmit, setWaitingForSubmit] = useState<boolean>(false);
+     const [submitServerFailed, setSubmitServerFailed] = useState<boolean>(
+@@ -286,6 +291,11 @@ function Judge(props: {
+                 }
+                 case 'compiling-start': {
+                     setCompiling(true);
++                    setCompileError(null);
++                    break;
++                }
++                case 'compile-error': {
++                    setCompileError(data.output);
+                     break;
+                 }
+                 case 'compiling-stop': {
+@@ -434,6 +444,14 @@ function Judge(props: {
          setWaitingForSubmit(true);
      };
  
@@ -1177,28 +1263,70 @@ index 77dcac5..8b1cde3 100644
      const submitCf = () => {
          sendMessageToVSCode({
              command: 'submitCf',
-@@ -940,19 +950,7 @@ function Judge(props: {
-             <div className="results">{views}</div>
-             <div className="margin-10">
-                 <div className="action-container">
+@@ -937,22 +955,50 @@ function Judge(props: {
+                     {numPassed} / {total} {t('passedRate')}{' '}
+                 </span>
+             </div>
+-            <div className="results">{views}</div>
+-            <div className="margin-10">
+-                <div className="action-container">
 -                    <div className="button-grid">
--                        <button
++            {compileError !== null && (
++                <div className="compile-error">
++                    <div className="compile-error-head">
+                         <button
 -                            className="btn btn-green btn-block"
 -                            onClick={newCase}
 -                            title={t('newTestcase')}
--                        >
++                            className="compile-error-toggle"
++                            onClick={() =>
++                                setCompileErrorOpen(!compileErrorOpen)
++                            }
++                            title={t('compileErrorToggle')}
+                         >
 -                            <span className="icon">
 -                                <i className="codicon codicon-add"></i>
 -                            </span>{' '}
 -                            {t('newTestcase')}
--                        </button>
++                            <i
++                                className={`codicon codicon-chevron-${
++                                    compileErrorOpen ? 'down' : 'right'
++                                }`}
++                            ></i>{' '}
++                            {t('compileError')}（
++                            {
++                                compileError.split('\n').filter((l) => l !== '')
++                                    .length
++                            }{' '}
++                            {t('lines')}）
++                        </button>
++                        <button
++                            className="compile-error-copy"
++                            onClick={() =>
++                                sendMessageToVSCode({
++                                    command: 'copy-text',
++                                    text: compileError,
++                                })
++                            }
++                            title={t('copyCompileError')}
++                        >
++                            <i className="codicon codicon-copy"></i>
+                         </button>
 -                        {renderSubmitButton()}
--                    </div>
+                     </div>
++                    {compileErrorOpen && (
++                        <pre className="compile-error-text">{compileError}</pre>
++                    )}
++                </div>
++            )}
++            <div className="results">{views}</div>
++            <div className="margin-10">
++                <div className="action-container">
 +                    {/* [fork] 新しいテストケース・提出用にコピーは下部の固定バーへ移動 */}
                      {waitingForSubmit && (
                          <div className="margin-10">
                              {submitServerFailed ? (
-@@ -1005,25 +1003,29 @@ function Judge(props: {
+@@ -1005,25 +1051,29 @@ function Judge(props: {
                              )}
                          </div>
                      )}
@@ -1247,7 +1375,7 @@ index 77dcac5..8b1cde3 100644
                  </div>
                  {checkerVisible && (
                      <div className="pad-10 custom-checker-area">
-@@ -1146,80 +1148,22 @@ with open(sys.argv[2], "r") as f:
+@@ -1146,80 +1196,22 @@ with open(sys.argv[2], "r") as f:
                          </details>
                      </div>
                  )}
@@ -1341,7 +1469,7 @@ index 77dcac5..8b1cde3 100644
                                  <div
                                      className="feedback-tooltip"
                                      style={{
-@@ -1228,7 +1172,7 @@ with open(sys.argv[2], "r") as f:
+@@ -1228,7 +1220,7 @@ with open(sys.argv[2], "r") as f:
                                          gap: '6px',
                                      }}
                                  >
@@ -1350,7 +1478,7 @@ index 77dcac5..8b1cde3 100644
                                      <a
                                          role="button"
                                          style={{
-@@ -1241,10 +1185,10 @@ with open(sys.argv[2], "r") as f:
+@@ -1241,10 +1233,10 @@ with open(sys.argv[2], "r") as f:
                                          onClick={(e) => {
                                              e.stopPropagation();
                                              e.preventDefault();
@@ -1363,7 +1491,7 @@ index 77dcac5..8b1cde3 100644
                                              });
                                          }}
                                          title="Close"
-@@ -1256,52 +1200,121 @@ with open(sys.argv[2], "r") as f:
+@@ -1256,52 +1248,121 @@ with open(sys.argv[2], "r") as f:
                                      </a>
                                  </div>
                              )}
@@ -1526,7 +1654,7 @@ index 77dcac5..8b1cde3 100644
                      {renderTimeoutAVSuggestion()}
                  </div>
                  <div className="remote-message">
-@@ -1328,59 +1341,84 @@ with open(sys.argv[2], "r") as f:
+@@ -1328,59 +1389,84 @@ with open(sys.argv[2], "r") as f:
                          numPassed={numPassed}
                      />
                  )}
@@ -1564,8 +1692,9 @@ index 77dcac5..8b1cde3 100644
 +                        className="btn btn-block"
 +                        onClick={copyBundled}
 +                        title={t('copyForSubmit')}
-+                    >
-+                        <span className="icon">
+                     >
+                         <span className="icon">
+-                            <i className="codicon codicon-chevron-down"></i>
 +                            <i className="codicon codicon-copy"></i>
 +                        </span>{' '}
 +                        {t('copyForSubmit')}
@@ -1608,9 +1737,8 @@ index 77dcac5..8b1cde3 100644
 +                        className="btn btn-red delete-btn"
 +                        onClick={deleteTcs}
 +                        title={t('delete')}
-                     >
-                         <span className="icon">
--                            <i className="codicon codicon-chevron-down"></i>
++                    >
++                        <span className="icon">
 +                            <i className="codicon codicon-trash"></i>
 +                        </span>
 +                    </button>
@@ -1654,7 +1782,7 @@ index 77dcac5..8b1cde3 100644
          </div>
      );
 diff --git a/src/webview/frontend/app.css b/src/webview/frontend/app.css
-index 370b7bd..092bda2 100644
+index 370b7bd..1aef75b 100644
 --- a/src/webview/frontend/app.css
 +++ b/src/webview/frontend/app.css
 @@ -71,7 +71,8 @@ body {
@@ -1680,7 +1808,7 @@ index 370b7bd..092bda2 100644
  }
  
  .actions .split-btn,
-@@ -1047,3 +1049,15 @@ body.vscode-light .btn .color-orange {
+@@ -1047,3 +1049,52 @@ body.vscode-light .btn .color-orange {
  .footer-btn-row-2 {
      grid-column: span 2;
  }
@@ -1696,8 +1824,45 @@ index 370b7bd..092bda2 100644
 +.actions .fork-actions-grid .btn {
 +    margin: 0 !important;
 +}
++
++/* [fork] コンパイルエラーの欄 */
++.compile-error {
++    margin: 6px 0;
++    border: 1px solid var(--vscode-inputValidation-errorBorder, rgb(206, 40, 95));
++    border-radius: 4px;
++}
++
++.compile-error-head {
++    display: flex;
++    align-items: center;
++}
++
++.compile-error-head button {
++    background: none;
++    border: none;
++    color: var(--vscode-errorForeground, rgb(206, 40, 95));
++    cursor: pointer;
++    padding: 4px 6px;
++}
++
++.compile-error-toggle {
++    flex: 1;
++    text-align: left;
++    font-weight: bold;
++}
++
++.compile-error-text {
++    margin: 0;
++    padding: 6px;
++    max-height: 300px;
++    overflow: auto;
++    white-space: pre;
++    font-family: var(--vscode-editor-font-family);
++    font-size: var(--vscode-editor-font-size);
++    border-top: 1px solid var(--vscode-panel-border);
++}
 diff --git a/src/webview/processRunAll.ts b/src/webview/processRunAll.ts
-index acfb334..d958535 100644
+index acfb334..c984547 100644
 --- a/src/webview/processRunAll.ts
 +++ b/src/webview/processRunAll.ts
 @@ -4,6 +4,8 @@ import { compileFile, getBinSaveLocation } from '../compiler';
@@ -1709,7 +1874,7 @@ index acfb334..d958535 100644
  
  /**
   * Run every testcase in a problem one by one. Waits for the first to complete
-@@ -13,17 +15,22 @@ export default async (problem: Problem) => {
+@@ -13,17 +15,20 @@ export default async (problem: Problem) => {
      globalThis.logger.log('Run all started', problem);
      const didCompile = await compileFile(problem.srcPath);
      if (!didCompile) {
@@ -1724,9 +1889,7 @@ index acfb334..d958535 100644
              problem: problem,
          });
 -        await runSingleAndSave(problem, testCase.id, true, true);
-+        results.push(
-+            await runSingleAndSave(problem, testCase.id, true, true),
-+        );
++        results.push(await runSingleAndSave(problem, testCase.id, true, true));
      }
      globalThis.logger.log('Run all finished');
 +    fireTestRun(problem, true, results);
@@ -1764,46 +1927,66 @@ index 12aad21..eb30b62 100644
      return result;
  };
 diff --git a/src/webview/translations.ts b/src/webview/translations.ts
-index 04ac6f2..df427eb 100644
+index 04ac6f2..edc3d70 100644
 --- a/src/webview/translations.ts
 +++ b/src/webview/translations.ts
-@@ -37,6 +37,7 @@ export const translations: Record<string, any> = {
+@@ -37,6 +37,11 @@ export const translations: Record<string, any> = {
          failed: 'failed',
          passedRate: 'passed',
          newTestcase: 'New Testcase',
 +        copyForSubmit: 'Copy for Submit',
++        compileError: 'Compile error',
++        compileErrorToggle: 'Show or hide the compile error',
++        copyCompileError: 'Copy the compile error',
++        lines: 'lines',
          setOnlineJudge: 'Set ONLINE_JUDGE',
          support: 'Support',
          feedback: 'Feedback',
-@@ -195,6 +196,7 @@ export const translations: Record<string, any> = {
+@@ -195,6 +200,11 @@ export const translations: Record<string, any> = {
          failed: '失敗',
          passedRate: '通過',
          newTestcase: '新增測試案例',
 +        copyForSubmit: '複製以提交',
++        compileError: '編譯錯誤',
++        compileErrorToggle: '顯示或隱藏編譯錯誤',
++        copyCompileError: '複製編譯錯誤',
++        lines: '行',
          setOnlineJudge: '設定 ONLINE_JUDGE',
          support: '支持',
          feedback: '意見回饋',
-@@ -344,6 +346,7 @@ export const translations: Record<string, any> = {
+@@ -344,6 +354,11 @@ export const translations: Record<string, any> = {
          failed: '失败',
          passedRate: '通过',
          newTestcase: '新建测试用例',
 +        copyForSubmit: '复制以提交',
++        compileError: '编译错误',
++        compileErrorToggle: '显示或隐藏编译错误',
++        copyCompileError: '复制编译错误',
++        lines: '行',
          setOnlineJudge: '设置 ONLINE_JUDGE',
          support: '支持',
          feedback: '反馈',
-@@ -493,6 +496,7 @@ export const translations: Record<string, any> = {
+@@ -493,6 +508,11 @@ export const translations: Record<string, any> = {
          failed: '실패',
          passedRate: '통과',
          newTestcase: '새 테스트케이스',
 +        copyForSubmit: '제출용 복사',
++        compileError: '컴파일 오류',
++        compileErrorToggle: '컴파일 오류 표시/숨기기',
++        copyCompileError: '컴파일 오류 복사',
++        lines: '줄',
          setOnlineJudge: 'Set ONLINE_JUDGE',
          support: '후원',
          feedback: '피드백',
-@@ -647,6 +651,7 @@ export const translations: Record<string, any> = {
+@@ -647,6 +667,11 @@ export const translations: Record<string, any> = {
          failed: '失敗',
          passedRate: '成功',
          newTestcase: '新しいテストケース',
 +        copyForSubmit: '提出用にコピー',
++        compileError: 'コンパイルエラー',
++        compileErrorToggle: 'コンパイルエラーの表示・非表示',
++        copyCompileError: 'コンパイルエラーをコピー',
++        lines: '行',
          setOnlineJudge: 'ONLINE_JUDGE を設定',
          support: 'サポート',
          feedback: 'フィードバック',
