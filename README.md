@@ -79,7 +79,7 @@ AtCoder の ABC・ARC・AGC の開催中は、生成 AI の利用が制限され
 3. kyopro-atlas が作業フォルダの外にある場合、`notes/` に書くたびに承認を求められます。避けたい時は、`.claude/settings.local.json` の `permissions.additionalDirectories` に kyopro-atlas の `notes/` を足す。
 4. 記録の補助スクリプトは PyYAML を使うので、入っていなければ入れる。
 
-`/record-problem` を作業フォルダから使えるようにする kyopro-atlas 側の変更は、準備中です。
+作業フォルダから `/record-problem` を使うには、kyopro-atlas の main が ce73c30（PR #119）以降である必要があります。
 
 ## ライセンス
 
