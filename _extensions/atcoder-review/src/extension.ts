@@ -3,15 +3,17 @@
  *
  * - context.json：今開いているファイル・選択範囲・問題を書き出す（Claude が読む）
  * - last_test.json：cph fork のテスト結果を書き出す（Claude が読む）
- * - review.json：Claude が書いた指摘を、エディタとパネルに表示する
+ * - review.json・<id>.md・<id>.html：Claude が書いた指摘・本文・図を、ガターのアイコンとパネルに表示する
  * - review_state.json：パネルで「対処済み」にした指摘を記録する
  *
  * この拡張は Claude を呼ばない。設計は docs/dev/review-tool/design.md。
  */
 import * as fs from 'fs';
+import * as path from 'path';
 import * as vscode from 'vscode';
 import { ContextWriter } from './contextWriter';
 import { readEnv, problemFor } from './env';
+import { HtmlViews } from './htmlView';
 import { subscribeTestResults } from './lastTest';
 import { ReviewPanel } from './panel';
 import { ReviewController } from './review';
@@ -25,17 +27,29 @@ export function activate(context: vscode.ExtensionContext) {
     const getEnv = () => env;
 
     const contextWriter = new ContextWriter(getEnv, log);
-    const review = new ReviewController(getEnv, context.extensionUri, log);
-    const panel = new ReviewPanel(
-        () => review.panelModel(),
-        (id, resolved) => review.setResolved(id, resolved),
-        (line) => void review.reveal(line),
-    );
+    const review = new ReviewController(getEnv, context.extensionUri, context.workspaceState, log);
+    const htmlViews = new HtmlViews(log);
+    const panel = new ReviewPanel(context.extensionUri, {
+        model: () => review.panelModel(),
+        focusedId: () => review.focusedId,
+        toggle: (id, resolved) => review.setResolved(id, resolved),
+        reveal: (id) => void review.reveal(id),
+        fold: (ids, open) => review.setOpen(ids, open),
+        foldAll: (open) => review.setAllOpen(open),
+        openHtml: (id) => {
+            const dir = review.problemDir;
+            if (dir !== null) {
+                htmlViews.open(path.join(dir, `${id}.html`), `${review.task} ${id}`);
+            }
+        },
+    });
     context.subscriptions.push(
         contextWriter,
         review,
+        htmlViews,
         vscode.window.registerWebviewViewProvider(ReviewPanel.viewType, panel),
         review.onDidChange((m) => panel.update(m)),
+        review.onDidFocus((id) => panel.focus(id)),
     );
 
     /** 開いているエディタの問題をレビュー表示に伝える */
@@ -47,7 +61,7 @@ export function activate(context: vscode.ExtensionContext) {
         review.render();
     };
 
-    // review.json・review_state.json の変更を見張る
+    // review.json・review_state.json・<id>.md・<id>.html の変更を見張る
     let watcher: vscode.FileSystemWatcher | undefined;
     const watch = () => {
         watcher?.dispose();
@@ -61,9 +75,16 @@ export function activate(context: vscode.ExtensionContext) {
             log(`${env.root} を作れませんでした: ${(err as Error).message}`);
         }
         watcher = vscode.workspace.createFileSystemWatcher(
-            new vscode.RelativePattern(vscode.Uri.file(env.root), '**/*.json'),
+            new vscode.RelativePattern(vscode.Uri.file(env.root), '**/*.{json,md,html}'),
         );
-        const onChange = (uri: vscode.Uri) => review.onFileChanged(uri);
+        const onChange = (uri: vscode.Uri) => {
+            if (uri.fsPath.endsWith('.html')) {
+                htmlViews.refresh(uri.fsPath);
+            }
+            if (review.isOwnFile(uri)) {
+                review.reload();
+            }
+        };
         watcher.onDidCreate(onChange);
         watcher.onDidChange(onChange);
         watcher.onDidDelete(onChange);
@@ -78,6 +99,7 @@ export function activate(context: vscode.ExtensionContext) {
         }),
         vscode.window.onDidChangeTextEditorSelection((e) => {
             contextWriter.schedule(e.textEditor);
+            review.onCursor(e.textEditor);
         }),
         vscode.workspace.onDidSaveTextDocument((doc) => {
             const editor = vscode.window.activeTextEditor;
@@ -91,7 +113,9 @@ export function activate(context: vscode.ExtensionContext) {
             if (editor?.document === e.document) {
                 contextWriter.schedule(editor); // dirty の変化
             }
-            review.render(); // 行のずれの表示を更新する
+            if (e.document.uri.scheme === 'file') {
+                review.render(); // 行の追従を描き直す
+            }
         }),
         vscode.window.onDidChangeVisibleTextEditors(() => review.render()),
         vscode.workspace.onDidChangeConfiguration((e) => {

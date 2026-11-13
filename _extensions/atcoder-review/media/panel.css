@@ -1,0 +1,294 @@
+body {
+    padding: 0 8px 16px;
+    font-size: var(--vscode-font-size);
+    color: var(--vscode-foreground);
+}
+
+button {
+    font: inherit;
+    cursor: pointer;
+}
+
+.clickable {
+    cursor: pointer;
+}
+
+.empty {
+    color: var(--vscode-descriptionForeground);
+    margin: 8px 0;
+}
+
+.error {
+    color: var(--vscode-errorForeground);
+    margin: 6px 0;
+    white-space: pre-wrap;
+}
+
+.warn {
+    color: var(--vscode-editorWarning-foreground);
+    margin: 4px 0;
+    font-size: 0.9em;
+}
+
+/* ---- 見出し */
+
+.header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+    margin: 8px 0;
+}
+
+.task {
+    font-weight: bold;
+}
+
+.progress {
+    color: var(--vscode-descriptionForeground);
+    margin-left: 6px;
+}
+
+.header-tools {
+    display: flex;
+    gap: 4px;
+}
+
+button.tool,
+button.html {
+    background: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-button-secondaryForeground);
+    border: none;
+    border-radius: 2px;
+    padding: 1px 6px;
+    font-size: 0.9em;
+}
+
+button.tool:hover,
+button.html:hover {
+    background: var(--vscode-button-secondaryHoverBackground);
+}
+
+/* ---- 種類ごとの色 */
+
+.kind-bug { --kind: var(--vscode-editorError-foreground); }
+.kind-risk { --kind: var(--vscode-editorWarning-foreground); }
+.kind-hint { --kind: var(--vscode-editorInfo-foreground); }
+.kind-improve { --kind: var(--vscode-descriptionForeground); }
+.kind-alt { --kind: var(--vscode-charts-purple); }
+.kind-library { --kind: var(--vscode-charts-green); }
+
+.section-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 12px 0 2px;
+    font-weight: bold;
+}
+
+.section-head .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--kind);
+}
+
+/* ---- 項目 */
+
+ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+li.item {
+    padding: 5px 4px;
+    border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+li.item.focused {
+    background: var(--vscode-list-inactiveSelectionBackground);
+    outline: 1px solid var(--vscode-focusBorder);
+}
+
+li.item.resolved .item-head .title,
+li.item.resolved .item-meta,
+li.item.resolved .md {
+    opacity: 0.45;
+}
+
+.item-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 4px;
+}
+
+.item-head input {
+    margin: 3px 0 0;
+    flex: none;
+}
+
+.chevron {
+    flex: none;
+    width: 1em;
+    font-size: 0.75em;
+    margin-top: 3px;
+    cursor: pointer;
+    transition: transform 0.1s;
+    color: var(--vscode-descriptionForeground);
+}
+
+.chevron.open {
+    transform: rotate(90deg);
+}
+
+.chevron.none {
+    cursor: default;
+}
+
+.title {
+    flex: 1;
+    word-break: break-word;
+}
+
+.item-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 2px 0 0 calc(1em + 22px);
+    font-size: 0.9em;
+    color: var(--vscode-descriptionForeground);
+}
+
+.item-meta .line.clickable:hover {
+    color: var(--vscode-textLink-foreground);
+    text-decoration: underline;
+}
+
+.item-meta .line.lost {
+    color: var(--vscode-editorWarning-foreground);
+}
+
+/* ---- 本文（Markdown） */
+
+.md {
+    margin: 6px 0 2px calc(1em + 22px);
+    line-height: 1.6;
+    word-break: break-word;
+}
+
+.md > :first-child {
+    margin-top: 0;
+}
+
+.md > :last-child {
+    margin-bottom: 0;
+}
+
+.md h1, .md h2, .md h3, .md h4 {
+    margin: 0.8em 0 0.3em;
+    font-size: 1.05em;
+}
+
+.md p, .md ul, .md ol, .md table, .md pre, .md blockquote {
+    margin: 0.4em 0;
+}
+
+.md ul, .md ol {
+    padding-left: 1.4em;
+    list-style: revert;
+}
+
+.md a {
+    color: var(--vscode-textLink-foreground);
+}
+
+.md code {
+    font-family: var(--vscode-editor-font-family);
+    font-size: 0.95em;
+    background: var(--vscode-textCodeBlock-background);
+    padding: 0 3px;
+    border-radius: 3px;
+}
+
+.md pre {
+    background: var(--vscode-textCodeBlock-background);
+    padding: 6px 8px;
+    border-radius: 3px;
+    overflow-x: auto;
+}
+
+.md pre code {
+    background: none;
+    padding: 0;
+}
+
+.md table {
+    border-collapse: collapse;
+}
+
+.md th, .md td {
+    border: 1px solid var(--vscode-panel-border);
+    padding: 2px 6px;
+}
+
+.md th {
+    background: var(--vscode-textCodeBlock-background);
+}
+
+.md blockquote {
+    border-left: 3px solid var(--vscode-textBlockQuote-border);
+    background: var(--vscode-textBlockQuote-background);
+    padding: 2px 8px;
+}
+
+.md mark {
+    background: var(--vscode-editor-findMatchHighlightBackground);
+    color: inherit;
+    padding: 0 2px;
+}
+
+.md .ok { color: var(--vscode-charts-green); font-weight: bold; }
+.md .ng { color: var(--vscode-editorError-foreground); font-weight: bold; }
+.md .key { color: var(--vscode-charts-yellow); font-weight: bold; }
+
+.md math[display='block'] {
+    margin: 0.4em 0;
+    overflow-x: auto;
+}
+
+/* 囲み（> [!NOTE] など） */
+.md blockquote.alert {
+    border-left-color: var(--alert);
+    background: none;
+}
+
+.md blockquote.alert::before {
+    content: attr(data-title);
+    display: block;
+    font-weight: bold;
+    color: var(--alert);
+}
+
+.md .alert-note { --alert: var(--vscode-charts-blue); }
+.md .alert-tip { --alert: var(--vscode-charts-green); }
+.md .alert-important { --alert: var(--vscode-charts-purple); }
+.md .alert-warning { --alert: var(--vscode-charts-yellow); }
+.md .alert-caution { --alert: var(--vscode-charts-red); }
+
+/* C++ の色分け（highlight.js） */
+.hljs-keyword, .hljs-built_in, .hljs-type { color: #569cd6; }
+.hljs-string, .hljs-char { color: #ce9178; }
+.hljs-number, .hljs-literal { color: #b5cea8; }
+.hljs-comment { color: #6a9955; font-style: italic; }
+.hljs-meta { color: #c586c0; }
+.hljs-title { color: #dcdcaa; }
+
+body.vscode-light .hljs-keyword, body.vscode-light .hljs-built_in, body.vscode-light .hljs-type { color: #0000ff; }
+body.vscode-light .hljs-string, body.vscode-light .hljs-char { color: #a31515; }
+body.vscode-light .hljs-number, body.vscode-light .hljs-literal { color: #098658; }
+body.vscode-light .hljs-comment { color: #008000; }
+body.vscode-light .hljs-meta { color: #af00db; }
+body.vscode-light .hljs-title { color: #795e26; }

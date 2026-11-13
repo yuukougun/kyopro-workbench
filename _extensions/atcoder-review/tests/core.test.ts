@@ -5,11 +5,12 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { test } from 'node:test';
 import {
-    anchorMatches,
     buildLastTest,
     CphTestCase,
     expandPath,
+    isDistinctiveAnchor,
     localIso,
+    locateItem,
     MAX_LINES,
     parseReview,
     parseState,
@@ -136,43 +137,96 @@ test('parseReview: 正しい形', () => {
         JSON.stringify({
             file: 'abc400/c.cpp',
             progress: { maxHint: 2, accepted: true },
-            nextId: 3,
+            nextId: 4,
             items: [
-                { id: 'r1', line: 3, endLine: 5, anchor: 'x', severity: 'error', hintLevel: 1, message: 'm1' },
-                { id: 'r2', line: 7, message: 'm2' },
+                { id: 'r1', line: 3, endLine: 5, anchor: 'x', kind: 'bug', hintLevel: 1, title: 't1' },
+                { id: 'r2', line: 7, kind: 'library', title: 't2' },
+                { id: 'r3', line: null, kind: 'alt', title: '行に結び付かない' },
             ],
         }),
     );
     assert.ok(r.ok);
     if (!r.ok) return;
     assert.deepEqual(r.value.progress, { maxHint: 2, accepted: true, gaveUp: false });
-    assert.equal(r.value.items.length, 2);
-    assert.equal(r.value.items[1].severity, 'warning');
-    assert.equal(r.value.items[1].endLine, 7);
+    assert.deepEqual(
+        r.value.items.map((i) => [i.id, i.line, i.endLine, i.kind]),
+        [
+            ['r1', 3, 5, 'bug'],
+            ['r2', 7, 7, 'library'],
+            ['r3', null, null, 'alt'],
+        ],
+    );
     assert.deepEqual(r.value.warnings, []);
 });
 
 test('parseReview: 壊れた JSON と、形の違う項目', () => {
-    const bad = parseReview('{"items": [');
-    assert.equal(bad.ok, false);
+    assert.equal(parseReview('{"items": [').ok, false);
     assert.equal(parseReview('[]').ok, false);
     const r = parseReview(
         JSON.stringify({
             progress: { maxHint: 9 },
             items: [
-                { id: 'r1', line: 0, message: 'x' },
-                { line: 2, message: 'x' },
-                { id: 'r3', line: 2 },
-                { id: 'r4', line: 2, message: 'ok' },
-                { id: 'r4', line: 3, message: 'dup' },
+                { id: 'r1', line: 0, kind: 'bug', title: 'x' },
+                { line: 2, kind: 'bug', title: 'x' },
+                { id: '../x', line: 2, kind: 'bug', title: 'x' },
+                { id: 'r4', line: 2, kind: 'bug' },
+                { id: 'r5', line: 2, kind: 'severe', title: 'ok' },
+                { id: 'r5', line: 3, kind: 'bug', title: 'dup' },
             ],
         }),
     );
     assert.ok(r.ok);
     if (!r.ok) return;
     assert.equal(r.value.progress.maxHint, 3);
-    assert.deepEqual(r.value.items.map((i) => i.id), ['r4']);
-    assert.equal(r.value.warnings.length, 4);
+    assert.deepEqual(r.value.items.map((i) => [i.id, i.kind]), [['r5', 'hint']]);
+    assert.equal(r.value.warnings.length, 6);
+});
+
+const lines = (text: string) => {
+    const ls = text.split('\n');
+    return [ls.length, (l: number) => ls[l - 1]] as const;
+};
+
+test('locateItem: 行に結び付かない・そのまま・見失う', () => {
+    const [n, at] = lines('a\nfor (int i = 0; i < n; i++) {\n}');
+    assert.deepEqual(locateItem({ line: null, endLine: null }, n, at), { state: 'free' });
+    assert.deepEqual(locateItem({ line: 2, endLine: 2, anchor: '  for (int i = 0; i < n; i++) {' }, n, at), {
+        state: 'found',
+        line: 2,
+        endLine: 2,
+        moved: false,
+    });
+    assert.deepEqual(locateItem({ line: 2, endLine: 2, anchor: 'while (x) {' }, n, at), { state: 'lost' });
+    // anchor がなければ書かれた行のまま（範囲の外なら見失う）
+    assert.deepEqual(locateItem({ line: 3, endLine: 3 }, n, at), { state: 'found', line: 3, endLine: 3, moved: false });
+    assert.deepEqual(locateItem({ line: 9, endLine: 9 }, n, at), { state: 'lost' });
+});
+
+test('locateItem: 行がずれたら近い行へ追従し、範囲ごと移す', () => {
+    const [n, at] = lines('new1\nnew2\nint main() {\n  solve();\n}');
+    assert.deepEqual(locateItem({ line: 1, endLine: 2, anchor: 'int main() {' }, n, at), {
+        state: 'found',
+        line: 3,
+        endLine: 4,
+        moved: true,
+    });
+    // 同じ距離なら下を優先する
+    const [n2, at2] = lines('ans += x;\nfoo\nans += x;');
+    assert.deepEqual(locateItem({ line: 2, endLine: 2, anchor: 'ans += x;' }, n2, at2), {
+        state: 'found',
+        line: 3,
+        endLine: 3,
+        moved: true,
+    });
+});
+
+test('locateItem: ありふれた行は追従しない', () => {
+    assert.ok(!isDistinctiveAnchor('}'));
+    assert.ok(!isDistinctiveAnchor('  });  '));
+    assert.ok(!isDistinctiveAnchor(''));
+    assert.ok(isDistinctiveAnchor('int n;'));
+    const [n, at] = lines('x\n}\n}');
+    assert.deepEqual(locateItem({ line: 1, endLine: 1, anchor: '}' }, n, at), { state: 'lost' });
 });
 
 test('parseState と pruneState', () => {
@@ -181,13 +235,6 @@ test('parseState と pruneState', () => {
     assert.deepEqual(parseState('not json'), {});
     assert.equal(pruneState(s, ['r1', 'r2', 'r3']), null);
     assert.deepEqual(pruneState(s, ['r2']), { r2: { resolved: false } });
-});
-
-test('anchorMatches: 前後の空白は無視', () => {
-    assert.ok(anchorMatches(undefined, 'x'));
-    assert.ok(anchorMatches('for (;;) {', '    for (;;) {  '));
-    assert.ok(!anchorMatches('for (;;) {', 'while (1) {'));
-    assert.ok(!anchorMatches('x', undefined));
 });
 
 test('progressLabel', () => {

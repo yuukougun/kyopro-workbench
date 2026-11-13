@@ -6,3 +6,5 @@ node_modules/**
 tsconfig.json
 package-lock.json
 *.vsix
+webview/**
+tsconfig.webview.json

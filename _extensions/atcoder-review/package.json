@@ -1,8 +1,8 @@
 {
     "name": "atcoder-review",
     "displayName": "AtCoder Review",
-    "description": "AtCoder の精進用。Claude Code が書いた指摘をエディタに表示し、今の状態とテスト結果を Claude に渡す",
-    "version": "0.1.0",
+    "description": "AtCoder の精進用。Claude Code が書いた指摘をパネルに表示し、今の状態とテスト結果を Claude に渡す",
+    "version": "0.2.0",
     "publisher": "yuukougun",
     "license": "CC0-1.0",
     "repository": {
@@ -66,14 +66,23 @@
         ]
     },
     "scripts": {
-        "compile": "tsc -p .",
-        "test": "tsc -p . && node --test out/tests/*.test.js",
+        "compile": "tsc -p . && tsc -p tsconfig.webview.json && npm run bundle",
+        "bundle": "esbuild webview/panel.ts --bundle --minify --format=iife --target=chrome108 --outfile=media/panel.js --log-level=warning",
+        "test": "npm run compile && node --test out/tests/*.test.js",
         "package": "npm test && vsce package --no-dependencies -o atcoder-review.vsix"
     },
     "devDependencies": {
+        "@types/markdown-it": "14.1.2",
         "@types/node": "^20.19.0",
         "@types/vscode": "~1.85.0",
+        "@vscode/markdown-it-katex": "1.1.1",
         "@vscode/vsce": "~3.2.2",
+        "dompurify": "3.2.4",
+        "esbuild": "0.24.2",
+        "highlight.js": "11.10.0",
+        "katex": "0.16.11",
+        "markdown-it": "14.1.0",
+        "markdown-it-mark": "4.0.0",
         "typescript": "~5.6.3"
     }
 }

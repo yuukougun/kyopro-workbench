@@ -22,3 +22,4 @@ include/
 # レビュー拡張のビルドで生成されるもの
 node_modules/
 _extensions/atcoder-review/out/
+_extensions/atcoder-review/media/panel.js

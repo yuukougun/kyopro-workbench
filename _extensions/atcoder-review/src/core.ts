@@ -164,16 +164,28 @@ export const buildLastTest = (
 
 // ---------------------------------------------------------------- 指摘
 
-export type Severity = 'error' | 'warning' | 'info';
+/** 指摘の種類。パネルではこの順に並べる */
+export const KINDS = ['bug', 'risk', 'hint', 'improve', 'alt', 'library'] as const;
+export type Kind = (typeof KINDS)[number];
+
+export const KIND_LABELS: Record<Kind, string> = {
+    bug: '誤り',
+    risk: '誤りの可能性',
+    hint: 'ヒント',
+    improve: '改善',
+    alt: '別解',
+    library: 'ライブラリ化の候補',
+};
 
 export type ReviewItem = {
     id: string;
-    line: number;
-    endLine: number;
+    /** 1 始まりの行。null なら行に結び付かない項目 */
+    line: number | null;
+    endLine: number | null;
     anchor?: string;
-    severity: Severity;
+    kind: Kind;
     hintLevel?: number;
-    message: string;
+    title: string;
 };
 
 export type Progress = { maxHint: number; accepted: boolean; gaveUp: boolean };
@@ -182,7 +194,7 @@ export type Review = {
     file: string | null;
     progress: Progress;
     items: ReviewItem[];
-    /** 読み飛ばした項目の説明（形が正しくなかったもの） */
+    /** 読み飛ばした・直して読んだ項目の説明（形が正しくなかったもの） */
     warnings: string[];
 };
 
@@ -193,6 +205,9 @@ const isObject = (v: unknown): v is Record<string, unknown> =>
 
 const isLine = (v: unknown): v is number =>
     typeof v === 'number' && Number.isInteger(v) && v >= 1;
+
+/** 本文（<id>.md）と図（<id>.html）のファイル名に使えるか */
+const isSafeId = (id: string) => /^[A-Za-z0-9_-]+$/.test(id);
 
 /** review.json を読む。項目単位の誤りは読み飛ばして warnings に入れる */
 export const parseReview = (text: string): ParseResult<Review> => {
@@ -219,44 +234,50 @@ export const parseReview = (text: string): ParseResult<Review> => {
     const items: ReviewItem[] = [];
     const warnings: string[] = [];
     const seen = new Set<string>();
-    const rawItems = Array.isArray(data.items) ? data.items : [];
     if (data.items !== undefined && !Array.isArray(data.items)) {
         warnings.push('items が配列ではありません');
     }
+    const rawItems = Array.isArray(data.items) ? data.items : [];
     rawItems.forEach((it: unknown, i: number) => {
         if (!isObject(it)) {
             warnings.push(`items[${i}] がオブジェクトではありません`);
             return;
         }
-        if (typeof it.id !== 'string' || it.id === '') {
-            warnings.push(`items[${i}] に id がありません`);
+        if (typeof it.id !== 'string' || !isSafeId(it.id)) {
+            warnings.push(`items[${i}] の id がないか、英数字・-・_ 以外を含みます`);
             return;
         }
         if (seen.has(it.id)) {
             warnings.push(`id ${it.id} が重複しています`);
             return;
         }
-        if (!isLine(it.line)) {
-            warnings.push(`${it.id}: line が1以上の整数ではありません`);
+        if (typeof it.title !== 'string' || it.title.trim() === '') {
+            warnings.push(`${it.id}: title がありません`);
             return;
         }
-        if (typeof it.message !== 'string') {
-            warnings.push(`${it.id}: message がありません`);
-            return;
+        let line: number | null = null;
+        if (it.line !== undefined && it.line !== null) {
+            if (!isLine(it.line)) {
+                warnings.push(`${it.id}: line が1以上の整数ではありません`);
+                return;
+            }
+            line = it.line;
+        }
+        let kind: Kind = 'hint';
+        if ((KINDS as readonly unknown[]).includes(it.kind)) {
+            kind = it.kind as Kind;
+        } else {
+            warnings.push(`${it.id}: kind が ${KINDS.join('・')} のどれでもないので、hint として表示しています`);
         }
         seen.add(it.id);
-        const severity: Severity =
-            it.severity === 'error' || it.severity === 'info'
-                ? it.severity
-                : 'warning';
         items.push({
             id: it.id,
-            line: it.line,
-            endLine: isLine(it.endLine) && it.endLine >= it.line ? it.endLine : it.line,
+            line,
+            endLine: line === null ? null : isLine(it.endLine) && it.endLine >= line ? it.endLine : line,
             anchor: typeof it.anchor === 'string' ? it.anchor : undefined,
-            severity,
+            kind,
             hintLevel: typeof it.hintLevel === 'number' ? it.hintLevel : undefined,
-            message: it.message,
+            title: it.title,
         });
     });
     return {
@@ -268,6 +289,59 @@ export const parseReview = (text: string): ParseResult<Review> => {
             warnings,
         },
     };
+};
+
+/** 短すぎる・記号だけの行は、ほかの行と取り違えやすいので追従に使わない */
+export const isDistinctiveAnchor = (anchor: string) => {
+    const t = anchor.trim();
+    return t.length >= 3 && !/^[\s{}()[\];,]*$/.test(t);
+};
+
+export type Located =
+    | { state: 'free' } // 行に結び付かない項目
+    | { state: 'found'; line: number; endLine: number; moved: boolean }
+    | { state: 'lost' };
+
+/**
+ * 指摘を書いた時の行の内容（anchor）を手がかりに、今どの行にあるかを探す。
+ * 元の行から近い順に上下を探し、同じ距離なら下を優先する（上に行を足すと下へずれることが多いため）。
+ */
+export const locateItem = (
+    item: Pick<ReviewItem, 'line' | 'endLine' | 'anchor'>,
+    lineCount: number,
+    lineAt: (line: number) => string,
+): Located => {
+    if (item.line === null) {
+        return { state: 'free' };
+    }
+    const span = (item.endLine ?? item.line) - item.line;
+    const at = (line: number, moved: boolean): Located => ({
+        state: 'found',
+        line,
+        endLine: Math.min(line + span, lineCount),
+        moved,
+    });
+    const matches = (line: number) =>
+        line >= 1 && line <= lineCount && lineAt(line).trim() === item.anchor!.trim();
+
+    if (item.anchor === undefined) {
+        return item.line <= lineCount ? at(item.line, false) : { state: 'lost' };
+    }
+    if (matches(item.line)) {
+        return at(item.line, false);
+    }
+    if (!isDistinctiveAnchor(item.anchor)) {
+        return { state: 'lost' };
+    }
+    for (let d = 1; d < lineCount + item.line; d++) {
+        if (matches(item.line + d)) {
+            return at(item.line + d, true);
+        }
+        if (matches(item.line - d)) {
+            return at(item.line - d, true);
+        }
+    }
+    return { state: 'lost' };
 };
 
 export type ResolvedState = Record<string, { resolved: boolean; at?: string }>;
@@ -311,10 +385,6 @@ export const pruneState = (
     }
     return changed ? out : null;
 };
-
-/** 指摘を書いた時の行の内容と、今の行の内容が同じか（前後の空白は無視） */
-export const anchorMatches = (anchor: string | undefined, lineText: string | undefined) =>
-    anchor === undefined || (lineText !== undefined && anchor.trim() === lineText.trim());
 
 export const progressLabel = (p: Progress): string => {
     const parts = [p.maxHint === 0 ? 'ヒントなし' : `ヒント Lv${p.maxHint}`];
