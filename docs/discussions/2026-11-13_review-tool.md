@@ -55,3 +55,13 @@
 - /record-problem の中では作業フォルダから呼ばれても atcoder.jp を開かない。開いて得た文章を notes/ に写さない。
 - kyopro-atlas の CLAUDE.md に「外のセッションから読み込まれた時」の注意を足す案は、kyopro-atlas のセッションが利用者に確かめてから入れる。
 - 実装は kyopro-atlas のセッションが行い PR を出す。作業フォルダ側からの動作確認はこちらが受け持つ（/record-problem は利用者が打つ必要がある）。
+
+---
+
+## 実装（フェーズ0〜3）→ 第13版
+- GitHub のリポジトリ名を kyopro-workbench に変え、説明文も更新した。
+- cph fork: 本家 ef8c7a7 に元のパッチがそのまま当たることを確かめ、拡張 ID の変更（yuukougun.cph-fork）とテスト結果のイベント（onDidRunTests）を足した。本家の試験 70 件は通過。vsce は `--no-dependencies` が要る（本家のリリース手順と同じ）。
+- 本家の package.json の版は元から 2077.0.0 だった（以前「本家の更新で上書きされないための版」と説明したのは誤り）。
+- レビュー拡張: 単体テスト 14 件と、vscode をまねた簡易な動作確認で、context.json・指摘の表示・対処済み・行のずれ・last_test.json を確かめた。実際の VSCode での確認は利用者に頼む。
+- 実装で設計から変えた点: last_test.json の compile.message はやめた（fork がコンパイルエラーの内容を渡さないため）、stderr を足した。添削の指摘は hintLevel 0。パネルはアクティビティバーに置く。
+- 権限ルールは公式ドキュメントに合わせ、書き込み許可を `Edit(/.atcoder-review/**)`（作業フォルダ基準）、編集禁止を `Edit(//**/*.cpp)` など（全体）にした。
