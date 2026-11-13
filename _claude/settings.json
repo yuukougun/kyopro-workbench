@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Edit(/.atcoder-review/**)"
+    ],
+    "deny": [
+      "Edit(//**/*.cpp)",
+      "Edit(//**/*.cc)",
+      "Edit(//**/*.cxx)",
+      "Edit(//**/*.hpp)",
+      "Edit(//**/*.hh)",
+      "Edit(//**/*.h)"
+    ]
+  }
+}
