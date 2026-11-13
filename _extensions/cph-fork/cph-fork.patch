@@ -1,15 +1,23 @@
 diff --git a/package.json b/package.json
-index 810ff63..5757ab9 100644
+index 810ff63..2aa97b4 100644
 --- a/package.json
 +++ b/package.json
-@@ -1,6 +1,6 @@
+@@ -1,11 +1,11 @@
  {
-     "name": "competitive-programming-helper",
+-    "name": "competitive-programming-helper",
 -    "displayName": "Competitive Programming Helper (cph)",
++    "name": "cph-fork",
 +    "displayName": "Competitive Programming Helper (cph) [fork]",
      "description": "Makes judging, compiling, and downloading problems for competitve programming easy. Also supports auto-submit for a few sites.",
      "license": "GPL-3.0-or-later",
      "icon": "icon.png",
+-    "publisher": "DivyanshuAgrawal",
+-    "version": "2077.0.0",
++    "publisher": "yuukougun",
++    "version": "1.0.0",
+     "engines": {
+         "vscode": "^1.52.0"
+     },
 @@ -52,6 +52,10 @@
              {
                  "command": "cph.compileWithoutRunning",
@@ -56,6 +64,14 @@ index 810ff63..5757ab9 100644
                  "cph.general.hideOutputDifference": {
                      "type": "boolean",
                      "default": true,
+@@ -501,6 +533,6 @@
+     },
+     "repository": {
+         "type": "git",
+-        "url": "https://github.com/agrawal-d/competitive-programming-helper/"
++        "url": "https://github.com/yuukougun/kyopro-workbench"
+     }
+ }
 diff --git a/package.nls.ja.json b/package.nls.ja.json
 index 7de963d..4be439f 100644
 --- a/package.nls.ja.json
@@ -491,10 +507,10 @@ index 0000000..6f1184c
 +    }
 +};
 diff --git a/src/extension.ts b/src/extension.ts
-index 26aa912..49b6f2c 100644
+index 26aa912..5f463f0 100644
 --- a/src/extension.ts
 +++ b/src/extension.ts
-@@ -39,6 +39,7 @@ import {
+@@ -39,11 +39,13 @@ import {
      getRetainWebviewContextPref,
      getDefaultOnlineJudge,
  } from './preferences';
@@ -502,7 +518,13 @@ index 26aa912..49b6f2c 100644
  import TelemetryReporter from '@vscode/extension-telemetry';
  import config from './config';
  import localize from './i18n';
-@@ -97,6 +98,27 @@ const registerCommands = (context: vscode.ExtensionContext) => {
+ import { setOnlineJudgeEnv, compileFile } from './compiler';
+ import { checkUnsupported } from './utils';
++import { testRunApi, CphForkApi } from './testEvents';
+ 
+ let judgeViewProvider: JudgeViewProvider;
+ 
+@@ -97,6 +99,27 @@ const registerCommands = (context: vscode.ExtensionContext) => {
          },
      );
  
@@ -530,6 +552,25 @@ index 26aa912..49b6f2c 100644
      judgeViewProvider = new JudgeViewProvider(context.extensionUri);
  
      const webviewView = vscode.window.registerWebviewViewProvider(
+@@ -120,7 +143,7 @@ const registerCommands = (context: vscode.ExtensionContext) => {
+ };
+ 
+ // This method is called when the extension is activated
+-export function activate(context: vscode.ExtensionContext) {
++export function activate(context: vscode.ExtensionContext): CphForkApi {
+     globalThis.logger.log('cph: activate() execution started');
+     globalThis.context = context;
+ 
+@@ -173,7 +196,8 @@ export function activate(context: vscode.ExtensionContext) {
+         }
+     });
+ 
+-    return;
++    // [fork] 他の拡張(レビュー拡張など)がテスト結果を受け取れるようにする
++    return testRunApi;
+ }
+ 
+ async function downloadRemoteMessage() {
 diff --git a/src/preferences.ts b/src/preferences.ts
 index 612065f..b27bcd1 100644
 --- a/src/preferences.ts
@@ -651,6 +692,99 @@ index 0000000..47dfd9e
 +        baseName = b === '' || /^[._]+$/.test(b) ? null : b;
 +    }
 +    return { dir, baseName, unknown: [...new Set(unknown)] };
++};
+diff --git a/src/testEvents.ts b/src/testEvents.ts
+new file mode 100644
+index 0000000..df42bb3
+--- /dev/null
++++ b/src/testEvents.ts
+@@ -0,0 +1,87 @@
++/**
++ * [fork] テスト結果を他の拡張に知らせるイベント
++ *
++ * activate() の戻り値で公開する。購読する側は
++ * `vscode.extensions.getExtension('yuukougun.cph-fork')` の exports から
++ * `onDidRunTests` を受け取る。この拡張自身はファイルを書かない。
++ */
++import * as vscode from 'vscode';
++import { Problem, RunResult } from './types';
++
++export type TestRunCase = {
++    id: number;
++    pass: boolean | null;
++    timeMs: number;
++    timeOut: boolean;
++    code: number | null;
++    signal: string | null;
++    input: string;
++    expected: string;
++    stdout: string;
++    stderr: string;
++};
++
++export type TestRunEvent = {
++    /** テストしたソースファイルの絶対パス */
++    srcPath: string;
++    /** 問題の URL(ローカルの問題ではソースファイルのパス) */
++    url: string;
++    compile: { ok: boolean };
++    /** その回に実行したケースだけ(1ケースだけ実行した時は1件) */
++    cases: TestRunCase[];
++};
++
++export type CphForkApi = {
++    onDidRunTests: vscode.Event<TestRunEvent>;
++};
++
++const emitter = new vscode.EventEmitter<TestRunEvent>();
++
++export const testRunApi: CphForkApi = { onDidRunTests: emitter.event };
++
++export const toTestRunCase = (
++    problem: Problem,
++    result: RunResult,
++): TestRunCase | null => {
++    const testCase = problem.tests.find((t) => t.id === result.id);
++    if (!testCase) {
++        return null;
++    }
++    return {
++        id: result.id,
++        pass: result.pass,
++        timeMs: result.time,
++        timeOut: result.timeOut,
++        code: result.code,
++        signal: result.signal,
++        input: testCase.input,
++        expected: testCase.output,
++        stdout: result.stdout,
++        stderr: result.stderr,
++    };
++};
++
++export const fireTestRun = (
++    problem: Problem,
++    compileOk: boolean,
++    results: (RunResult | undefined)[],
++) => {
++    const cases: TestRunCase[] = [];
++    for (const r of results) {
++        const c = r && toTestRunCase(problem, r);
++        if (c) {
++            cases.push(c);
++        }
++    }
++    try {
++        emitter.fire({
++            srcPath: problem.srcPath,
++            url: problem.url,
++            compile: { ok: compileOk },
++            cases,
++        });
++    } catch (err) {
++        // 購読側の失敗でテスト実行を止めない
++        globalThis.logger.error('[fork] onDidRunTests listener failed', err);
++    }
 +};
 diff --git a/src/tests/forkBundler.test.ts b/src/tests/forkBundler.test.ts
 new file mode 100644
@@ -970,7 +1104,7 @@ index e6e87a0..7c151cc 100644
      | GetInitialProblem
      | CreateLocalProblem
 diff --git a/src/webview/JudgeView.ts b/src/webview/JudgeView.ts
-index f146318..9eff70e 100644
+index f146318..86226ad 100644
 --- a/src/webview/JudgeView.ts
 +++ b/src/webview/JudgeView.ts
 @@ -21,10 +21,12 @@ import {
@@ -998,6 +1132,15 @@ index f146318..9eff70e 100644
                      case 'run-single-and-save': {
                          const problem = message.problem;
                          const id = message.id;
+@@ -176,7 +183,7 @@ class JudgeViewProvider implements vscode.WebviewViewProvider {
+                     case 'open-settings': {
+                         vscode.commands.executeCommand(
+                             'workbench.action.openSettings',
+-                            '@ext:DivyanshuAgrawal.competitive-programming-helper',
++                            '@ext:yuukougun.cph-fork',
+                         );
+                         break;
+                     }
 @@ -360,6 +367,7 @@ class JudgeViewProvider implements vscode.WebviewViewProvider {
              generatedJsonUri: generatedJsonUri.toString(),
              remoteServerAddress,
@@ -1553,6 +1696,73 @@ index 370b7bd..092bda2 100644
 +.actions .fork-actions-grid .btn {
 +    margin: 0 !important;
 +}
+diff --git a/src/webview/processRunAll.ts b/src/webview/processRunAll.ts
+index acfb334..d958535 100644
+--- a/src/webview/processRunAll.ts
++++ b/src/webview/processRunAll.ts
+@@ -4,6 +4,8 @@ import { compileFile, getBinSaveLocation } from '../compiler';
+ import { deleteBinary } from '../executions';
+ import { getLanguage } from '../utils';
+ import { getJudgeViewProvider } from '../extension';
++import { fireTestRun } from '../testEvents';
++import { RunResult } from '../types';
+ 
+ /**
+  * Run every testcase in a problem one by one. Waits for the first to complete
+@@ -13,17 +15,22 @@ export default async (problem: Problem) => {
+     globalThis.logger.log('Run all started', problem);
+     const didCompile = await compileFile(problem.srcPath);
+     if (!didCompile) {
++        fireTestRun(problem, false, []);
+         return;
+     }
++    const results: (RunResult | undefined)[] = [];
+     for (const testCase of problem.tests) {
+         getJudgeViewProvider().extensionToJudgeViewMessage({
+             command: 'running',
+             id: testCase.id,
+             problem: problem,
+         });
+-        await runSingleAndSave(problem, testCase.id, true, true);
++        results.push(
++            await runSingleAndSave(problem, testCase.id, true, true),
++        );
+     }
+     globalThis.logger.log('Run all finished');
++    fireTestRun(problem, true, results);
+     deleteBinary(
+         getLanguage(problem.srcPath),
+         getBinSaveLocation(problem.srcPath),
+diff --git a/src/webview/processRunSingle.ts b/src/webview/processRunSingle.ts
+index 12aad21..eb30b62 100644
+--- a/src/webview/processRunSingle.ts
++++ b/src/webview/processRunSingle.ts
+@@ -11,6 +11,7 @@ import { getIgnoreSTDERRORPref } from '../preferences';
+ import telmetry from '../telmetry';
+ import * as fs from 'fs';
+ import localize from '../i18n';
++import { fireTestRun } from '../testEvents';
+ 
+ export const runSingleAndSave = async (
+     problem: Problem,
+@@ -42,6 +43,7 @@ export const runSingleAndSave = async (
+     if (!skipCompile) {
+         if (!(await compileFile(srcPath))) {
+             globalThis.logger.error('Failed to compile', problem, id);
++            fireTestRun(problem, false, []);
+             return;
+         }
+     }
+@@ -124,5 +126,9 @@ export const runSingleAndSave = async (
+         result,
+         problem,
+     });
++    // [fork] 1ケースだけの実行(全ケース実行の途中でない時)は、ここで通知する
++    if (!skipCompile) {
++        fireTestRun(problem, true, [result]);
++    }
+     return result;
+ };
 diff --git a/src/webview/translations.ts b/src/webview/translations.ts
 index 04ac6f2..df427eb 100644
 --- a/src/webview/translations.ts
