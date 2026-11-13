@@ -1,7 +1,7 @@
 # AtCoder精進支援 設計書
 
-作成日：2026-11-13（第10版）　状態：設計段階（未実装）
-実装するリポジトリ：atcoder-library（名前を変える予定。13章）
+作成日：2026-11-13（第11版）　状態：設計段階（未実装）
+実装するリポジトリ：kyopro-workbench（旧 atcoder-library。名前の変更はフェーズ0で行う）
 連携できるリポジトリ（任意）：kyopro-atlas（教材・記録）
 
 各版の変更点と理由は `docs/discussions/2026-11-13_review-tool.md` にある。
@@ -108,7 +108,7 @@ Claude Codeのセッションは、作業フォルダで起動したもの1つ�
 ### 4.1 リポジトリの構成
 
 ```
-atcoder-library/
+kyopro-workbench/
 ├── _extensions/
 │   ├── cph-fork/                 # 旧 _cph。パッチ、vsix、ビルド手順
 │   └── atcoder-review/           # 新規：レビュー拡張のソースと vsix
@@ -546,7 +546,6 @@ AI補完系の拡張を入れていない、コンテスト用のVSCodeプロフ
 
 | 項目 | 内容 |
 |---|---|
-| リポジトリの名前 | atcoder-library から変える。候補から選ぶ |
 | cph forkのイベントの形 | 5.3で渡す内容の細部。実装時に決める |
 
 ---
