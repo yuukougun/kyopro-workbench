@@ -1,6 +1,6 @@
 # AtCoder精進支援 設計書
 
-作成日：2026-11-13（第11版）　状態：設計段階（未実装）
+作成日：2026-11-13（第12版）　状態：設計段階（未実装）
 実装するリポジトリ：kyopro-workbench（旧 atcoder-library。名前の変更はフェーズ0で行う）
 連携できるリポジトリ（任意）：kyopro-atlas（教材・記録）
 
@@ -377,6 +377,8 @@ cph forkの拡張IDは、フォークの一般的なやり方に従って自分�
 
 **原因の一言**：ヒントや解説を使った時、または解けなかった時は、最後に原因を4つ（知識不足／気づけなかった／実装ミス／時間不足）から1つ選んで添える。ヒントの段階では、原因も手がかりになるので、解けた後に添える。自力でACした時は添えない。分類はkyopro-atlasと同じ。
 
+**`/record-problem` の中での注意**：作業フォルダから呼んでも、記録の手順の中では atcoder.jp を開かない。会話で開いた問題文や解説の文章を `notes/` に写さず、`memo`・`learned` は自分の言葉で書く。
+
 **その他**：各ファイルの形式（4章）、review.jsonの更新のしかたと対処済みの扱い（4.8）。
 
 ### 6.2 skills
@@ -435,6 +437,8 @@ kyopro-atlasの記録スキル `/record-problem` を、作業フォルダのセ�
 ln -s <kyopro-atlas>/.claude/skills/record-problem <作業フォルダ>/.claude/skills/record-problem
 ```
 
+kyopro-atlas が作業フォルダの外にある場合は、`notes/` への書き込みのたびに作業フォルダの外への承認を求められる。避けたい人は、各自の `settings.local.json` の `additionalDirectories` に kyopro-atlas の `notes/` を足す。`record_tool.py` は PyYAML を使うので、入っていなければ入れる。
+
 コピーではなくリンクにするのは、スキルが補助スクリプト（`record_tool.py`）と一緒に動くことと、kyopro-atlasを更新した時に自動で追従させるため。個人の環境に依存する設定なので、install.sh では行わず、READMEに手順を書く。
 
 kyopro-atlasを作業フォルダの中に置いていても、その `.claude/skills/` は、Claudeがkyopro-atlasのファイルを読むか編集するまで読み込まれない。最初から `/` のメニューに出すため、リンクで明示的に登録する。
@@ -445,9 +449,11 @@ kyopro-atlasを作業フォルダの中に置いていても、その `.claude/s
 
 今の `/record-problem` は、リポジトリの根で実行される前提で、補助スクリプトと `notes/` を相対パスで扱っている。これを次のように直す。
 
-- `record_tool.py` に、リポジトリの根を出力する機能（例：`record_tool.py root`）と、`tools/ap.py` を代わりに呼ぶ機能（例：`record_tool.py ap show <ID>`）を加える。`record_tool.py` と `tools/ap.py` は、どちらもすでに `Path(__file__).resolve()` で実体の場所から根を求める作りなので、シンボリックリンク経由で呼ばれても実体のリポジトリを指せる。
+- `record_tool.py` に、リポジトリの根を出力する機能（例：`record_tool.py root`）と、`tools/ap.py` を代わりに呼ぶ機能（例：`record_tool.py ap show <ID>`）を加える。`ap` で通すのは `show`・`contest`・`fetch` だけにし、`allowed-tools` で許す範囲を狭く保つ。`record_tool.py` と `tools/ap.py` は、どちらもすでに `Path(__file__).resolve()` で実体の場所から根を求める作りなので、シンボリックリンク経由で呼ばれても実体のリポジトリを指せる。
 - スキルの本文と `allowed-tools` のコマンドは、`python3 ${CLAUDE_SKILL_DIR}/record_tool.py …` の1種類だけにする。`${CLAUDE_SKILL_DIR}` は `allowed-tools` のBashのルールの中でも展開される。`tools/ap.py` を直接呼ばないのは、その絶対パスが環境ごとに違い、`allowed-tools` に書けないため。
-- `notes/` の書き込み先は、`record_tool.py root` の出力を基準にした絶対パスにする。
+- `notes/` の書き込み先と、本文で読ませるファイル（`claude/record-format.md` など）は、`record_tool.py root` の出力を基準にした絶対パスにする。
+- 作業フォルダの外から呼ばれても、`/record-problem` の中では atcoder.jp を開かない。開いて得た問題文や解説の文章を `notes/` に写さない。
+- kyopro-atlas の `CLAUDE.md` に、外のセッションから読み込まれた時の注意書きを足すかは、kyopro-atlas のセッションが利用者に確かめて決める。
 
 `${CLAUDE_SKILL_DIR}` がリンク側と実体側のどちらのパスになるかは公式ドキュメントに書かれていないが、どちらでも `record_tool.py` に届き、根は実体側から求まるので、この書き方なら影響しない。
 
@@ -457,11 +463,11 @@ kyopro-atlasのフォルダで使う時の動きは変わらない。
 
 | 項目 | 値 | ないとき | 元にする情報 |
 |---|---|---|---|
-| `support` | `自力`・`ヒント`・`解説`・`ギブアップ` | null | `progress`：`gaveUp` なら `ギブアップ`、`maxHint` が3なら `解説`、1〜2なら `ヒント`、0なら `自力` |
-| `status` | `AC`・`未AC` | null | `progress.accepted` |
-| `code` | 作業フォルダからの解答ファイルのパス | null | `review.json` の `file` |
+| `support` | `自力`・`ヒントだけ`・`解説まで`・`ギブアップ` | null | `progress`：`gaveUp` なら `ギブアップ`、`maxHint` が3なら `解説まで`、1〜2なら `ヒントだけ`、0なら `自力` |
+| `status` | `AC`・`未AC`（その記録の時点の状態。records の1件ごとに持つ） | null | `progress.accepted` |
+| `code` | 作業フォルダからの解答ファイルのパス（kyopro-atlas 側ではただの文字列として扱う） | null | `review.json` の `file` |
 
-どれも任意の項目にする。`support` は原因（なぜ解けなかったか）とは別に、どこまで助けを使ったかを残す。`status` は解き直しが必要な問題を後から探しやすくする。`code` は記録から自分の実装をたどれるようにする。
+どれも任意の項目にし、v1 の記録もそのまま通す。値の名前は kyopro-atlas の解説役の言葉（「ヒントだけ」「解説まで」）にそろえる。claude.ai の解説から出す記録用まとめでは、`code` は常に null、`status` は利用者がACしたと言った時だけ `AC` にする。`support` は原因（なぜ解けなかったか）とは別に、どこまで助けを使ったかを残す。`status` は解き直しが必要な問題を後から探しやすくする。`code` は記録から自分の実装をたどれるようにする。
 
 **合わせて直すファイル**
 
@@ -470,7 +476,7 @@ kyopro-atlasの規則に従い、形を変える時は版を上げ、関係す�
 | ファイル | 変更 |
 |---|---|
 | `.claude/skills/record-problem/SKILL.md` | どこで起動しても動く書き方にする。v2の項目を notes に書く |
-| `.claude/skills/record-problem/record_tool.py` | `root` と `ap` の機能を加える。`check` にv2の項目の値の検査を加える |
+| `.claude/skills/record-problem/record_tool.py` | `root` と `ap`（show・contest・fetch のみ）の機能を加える。`check` にv2の項目の値の検査を加える（v1 の記録も通す） |
 | `claude/record-format.md` | v2の項目を追加する |
 | `claude/explain.md` | 記録用まとめをv2の形で出す |
 

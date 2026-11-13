@@ -46,3 +46,12 @@
 - リポジトリの名前は変える（候補を出して選んでもらう）。
 - cph fork の拡張 ID は一般的なやり方に従う → 自分の ID（`yuukougun.cph-fork`）にする。設定とコマンド（`cph.*`）は本家のままにし、本家を無効にして入れ替えて使う。
 - リポジトリの名前は `kyopro-workbench` に決定（kyopro-atlas と名前を揃え、「教材」と「作業環境」の役割分担を表す）→ 第11版。GitHub 上の変更はフェーズ0で、利用者の指示を受けてから行う。
+
+---
+
+## kyopro-atlas のセッションとの相談（/record-problem の変更）→ 第12版
+- 案1（record_tool.py に root・ap を足し、${CLAUDE_SKILL_DIR} 経由で呼ぶ）は合意。追加: ap は show・contest・fetch だけ通す、record-format.md も root 基準で読む、作業フォルダが外にある人向けに additionalDirectories の案内、PyYAML の注意。
+- support の値は kyopro-atlas の言葉に合わせ `自力`・`ヒントだけ`・`解説まで`・`ギブアップ`（「解説」だけだと公式解説と区別できないため）。status は記録1件ごと。code はただの文字列。v1 の記録も通す。
+- /record-problem の中では作業フォルダから呼ばれても atcoder.jp を開かない。開いて得た文章を notes/ に写さない。
+- kyopro-atlas の CLAUDE.md に「外のセッションから読み込まれた時」の注意を足す案は、kyopro-atlas のセッションが利用者に確かめてから入れる。
+- 実装は kyopro-atlas のセッションが行い PR を出す。作業フォルダ側からの動作確認はこちらが受け持つ（/record-problem は利用者が打つ必要がある）。
