@@ -29,18 +29,19 @@ AtCoder の過去問精進を、Claude Code との会話で支援する仕組み
 - ヒントは段階的に出します（Lv1：気づくべき点 → Lv2：手法の名前 → Lv3：方針と実装の要点）。完全な解答は、AC を申告した後（`/coach-review`）かギブアップした後（`/coach-giveup`）だけです。
 - WSL 2（Linux）を前提にしています。Linux・macOS でも動く想定ですが、Windows のネイティブ環境には対応していません。
 
-<p>
-<img src="docs/images/review-panel.png" alt="レビュー拡張のパネル：種類ごとの指摘の一覧" width="380">
-<img src="docs/images/review-panel-open.png" alt="レビュー拡張のパネル：本文を開いたところ" width="380">
-</p>
+![エディタと AtCoder Review のパネル](docs/images/overview.png)
 
-左：種類ごと（誤り・誤りの可能性・ヒント・改善・別解・ライブラリ化の候補）に並んだ指摘。右：本文を開いたところ（数式・表・C++ のコード・注意の囲み・教材のリンク）。
+エディタにはガターの印だけを出し、指摘はパネルに種類ごと（誤り・誤りの可能性・ヒント・改善・別解・ライブラリ化の候補）に並びます。見出しを開くと本文（数式・表・C++ のコード・注意の囲み）が出て、教材のリンクも付きます。カーソルのある行の指摘はパネルで強調されます。
 
-<img src="docs/images/review-html.png" alt="Claude が書いた HTML の図をタブで開いたところ" width="480">
+![Claude が書いた HTML の図をタブで開いたところ](docs/images/html-tab.png)
 
 図などは、Claude が書いた HTML をエディタのタブで開いて見られます。
 
-（画像は見本のデータを、実際のパネルのコードで描いたものです）
+![cph の判定パネルのコンパイルエラーの欄](docs/images/cph-compile-error.png)
+
+cph fork の判定パネルには、開閉できるコンパイルエラーの欄があります（コピーのボタンつき）。
+
+（画像は、見本のデータを開いた VSCode（ブラウザ版）の画面です）
 
 ### セットアップ
 

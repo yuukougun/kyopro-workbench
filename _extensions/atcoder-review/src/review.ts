@@ -67,6 +67,16 @@ const KIND_COLORS: Record<Kind, string> = {
 
 const HIGHLIGHT_MS = 1500;
 
+/** 数の組を辞書式に比べる */
+const lexLess = (a: number[], b: number[]) => {
+    for (let i = 0; i < a.length; i++) {
+        if (a[i] !== b[i]) {
+            return a[i] < b[i];
+        }
+    }
+    return false;
+};
+
 export class ReviewController implements vscode.Disposable {
     private problem: ProblemInfo | null = null;
     /** 最後に読めた内容。壊れた review.json を読んだ時も、これを表示し続ける */
@@ -299,14 +309,22 @@ export class ReviewController implements vscode.Disposable {
             return;
         }
         const line = editor.selection.active.line + 1;
+        // カーソルの行を含む指摘のうち、未対処・範囲が狭い・始まりが近いものを優先する
         let hit: string | null = null;
+        let best: [number, number, number] | null = null;
         for (const it of this.review.items) {
             const loc = this.locate(it, editor.document);
-            if (loc.state === 'found' && loc.line <= line && line <= loc.endLine) {
+            if (loc.state !== 'found' || line < loc.line || loc.endLine < line) {
+                continue;
+            }
+            const key: [number, number, number] = [
+                this.state[it.id]?.resolved === true ? 1 : 0,
+                loc.endLine - loc.line,
+                line - loc.line,
+            ];
+            if (best === null || lexLess(key, best)) {
+                best = key;
                 hit = it.id;
-                if (this.state[it.id]?.resolved !== true) {
-                    break; // 未対処のものを優先する
-                }
             }
         }
         if (hit !== this.focused) {
@@ -377,8 +395,9 @@ export class ReviewController implements vscode.Disposable {
                     if (loc.state !== 'found') {
                         continue; // 見失った指摘は、違う行を指さないようアイコンを出さない
                     }
+                    // 複数行の指摘でも、アイコンは先頭の行だけに出す（全部の行に出すと、同じ範囲のほかの指摘が隠れる）
                     byKind.get(it.kind)!.push({
-                        range: new vscode.Range(loc.line - 1, 0, loc.endLine - 1, 0),
+                        range: new vscode.Range(loc.line - 1, 0, loc.line - 1, 0),
                     });
                 }
             }
