@@ -29,6 +29,19 @@ AtCoder の過去問精進を、Claude Code との会話で支援する仕組み
 - ヒントは段階的に出します（Lv1：気づくべき点 → Lv2：手法の名前 → Lv3：方針と実装の要点）。完全な解答は、AC を申告した後（`/coach-review`）かギブアップした後（`/coach-giveup`）だけです。
 - WSL 2（Linux）を前提にしています。Linux・macOS でも動く想定ですが、Windows のネイティブ環境には対応していません。
 
+<p>
+<img src="docs/images/review-panel.png" alt="レビュー拡張のパネル：種類ごとの指摘の一覧" width="380">
+<img src="docs/images/review-panel-open.png" alt="レビュー拡張のパネル：本文を開いたところ" width="380">
+</p>
+
+左：種類ごと（誤り・誤りの可能性・ヒント・改善・別解・ライブラリ化の候補）に並んだ指摘。右：本文を開いたところ（数式・表・C++ のコード・注意の囲み・教材のリンク）。
+
+<img src="docs/images/review-html.png" alt="Claude が書いた HTML の図をタブで開いたところ" width="480">
+
+図などは、Claude が書いた HTML をエディタのタブで開いて見られます。
+
+（画像は見本のデータを、実際のパネルのコードで描いたものです）
+
 ### セットアップ
 
 1. `_extensions/cph-fork/cph-fork.vsix` と `_extensions/atcoder-review/atcoder-review.vsix` を、VSCode の「Extensions: Install from VSIX...」でインストールする。本家の cph は無効にしておく。

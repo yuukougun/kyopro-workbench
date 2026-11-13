@@ -50,6 +50,8 @@ const vscode = acquireVsCodeApi();
 
 // ---------------------------------------------------------------- Markdown
 
+const KATEX_OPTIONS = { output: 'mathml', throwOnError: false };
+
 hljs.registerLanguage('cpp', cpp);
 const CPP_LANGS = new Set(['cpp', 'c++', 'c', 'cc', 'cxx', 'hpp', 'h']);
 
@@ -62,7 +64,7 @@ const md = new MarkdownIt({
             : '',
 });
 md.use(mark);
-md.use(katexPlugin, { katex, output: 'mathml', throwOnError: false });
+md.use(katexPlugin, { katex, ...KATEX_OPTIONS });
 
 const ALERTS: Record<string, string> = {
     NOTE: 'メモ',
@@ -90,7 +92,35 @@ md.core.ruler.after('block', 'alerts', (state) => {
     }
 });
 
-const renderMarkdown = (text: string) => DOMPurify.sanitize(md.render(text));
+/**
+ * 色の span（ok・ng・key）の中の `$...$` を数式にする。
+ * 数式のプラグインは HTML のタグの直後の `$` を数式として扱わないため、ここで補う。
+ */
+const renderMathInColorSpans = (html: string) => {
+    const t = document.createElement('template');
+    t.innerHTML = html;
+    for (const span of t.content.querySelectorAll('span.ok, span.ng, span.key')) {
+        for (const node of [...span.childNodes]) {
+            const text = node.nodeType === Node.TEXT_NODE ? (node.textContent ?? '') : '';
+            const parts = text.split(/(\$[^$\n]+\$)/);
+            if (parts.length === 1) continue;
+            const frag = document.createDocumentFragment();
+            for (const part of parts) {
+                if (/^\$[^$\n]+\$$/.test(part)) {
+                    const m = document.createElement('span');
+                    m.innerHTML = katex.renderToString(part.slice(1, -1), KATEX_OPTIONS);
+                    frag.append(m);
+                } else if (part !== '') {
+                    frag.append(document.createTextNode(part));
+                }
+            }
+            node.replaceWith(frag);
+        }
+    }
+    return t.innerHTML;
+};
+
+const renderMarkdown = (text: string) => renderMathInColorSpans(DOMPurify.sanitize(md.render(text)));
 
 // ---------------------------------------------------------------- 描画
 
